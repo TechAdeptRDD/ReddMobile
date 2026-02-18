@@ -11,6 +11,7 @@ use bitcoin::{
     Address, Amount, Network, OutPoint, PublicKey as BitcoinPublicKey, ScriptBuf, Sequence,
     Transaction, TxIn, TxOut, Txid, Witness,
 };
+use serde::Deserialize;
 
 /// Reddcoin's Base58 P2PKH version byte (`R...` legacy addresses).
 ///
@@ -19,11 +20,18 @@ use bitcoin::{
 /// so we need to consciously document and handle this divergence.
 pub const REDDCOIN_VERSION_BYTE: u8 = 0x3D;
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct UtxoInput {
+    pub txid: String,
+    pub vout: u32,
+    pub amount: u64,
+}
+
 /// Signs an OP_RETURN transaction for ReddID-style payload anchoring.
 ///
 /// This implementation follows the same cryptographic shape as Bitcoin legacy P2PKH signing:
-/// 1. Build an unsigned transaction with one input and two outputs.
-/// 2. Compute a SIGHASH digest for the input being signed.
+/// 1. Build an unsigned transaction with N inputs and two outputs.
+/// 2. Compute a SIGHASH digest per input being signed.
 /// 3. ECDSA-sign that digest with secp256k1.
 /// 4. Build scriptSig containing `<DER signature + sighash flag> <compressed pubkey>`.
 /// 5. Serialize transaction bytes as lowercase hex.
@@ -34,9 +42,7 @@ pub const REDDCOIN_VERSION_BYTE: u8 = 0x3D;
 ///   strict bitcoin-network checks when building the change output script.
 pub fn sign_opreturn_transaction(
     private_key_hex: String,
-    utxo_txid: String,
-    utxo_vout: u32,
-    utxo_amount: u64,
+    utxos: Vec<UtxoInput>,
     op_return_payload: String,
     change_address: String,
     network_fee: u64,
@@ -45,12 +51,17 @@ pub fn sign_opreturn_transaction(
         return Err("private_key_hex must be exactly 64 hex characters".to_string());
     }
 
-    if utxo_txid.len() != 64 {
-        return Err("utxo_txid must be exactly 64 hex characters".to_string());
+    if utxos.is_empty() {
+        return Err("at least one UTXO input is required".to_string());
     }
 
-    if network_fee > utxo_amount {
-        return Err("network_fee cannot exceed utxo_amount".to_string());
+    let total_input_amount = utxos.iter().try_fold(0u64, |acc, utxo| {
+        acc.checked_add(utxo.amount)
+            .ok_or_else(|| "total input amount overflowed u64".to_string())
+    })?;
+
+    if network_fee > total_input_amount {
+        return Err("network_fee cannot exceed total input amount".to_string());
     }
 
     let payload_bytes = hex::decode(op_return_payload)
@@ -61,7 +72,7 @@ pub fn sign_opreturn_transaction(
     let op_return_push = PushBytesBuf::try_from(payload_bytes)
         .map_err(|e| format!("OP_RETURN payload exceeds script push limits: {e}"))?;
 
-    let change_amount = utxo_amount - network_fee;
+    let change_amount = total_input_amount - network_fee;
 
     // -------------------------------------------------------------------------------------
     // Step 1) Parse private key material and derive the matching compressed public key.
@@ -76,20 +87,30 @@ pub fn sign_opreturn_transaction(
     let bitcoin_pubkey = BitcoinPublicKey::new(public_key);
 
     // -------------------------------------------------------------------------------------
-    // Step 2) Build tx input (from provided UTXO) and outputs (OP_RETURN + change).
+    // Step 2) Build tx inputs (from provided UTXOs) and outputs (OP_RETURN + change).
     // -------------------------------------------------------------------------------------
-    let txid = Txid::from_str(&utxo_txid).map_err(|e| format!("invalid utxo_txid: {e}"))?;
-    let outpoint = OutPoint {
-        txid,
-        vout: utxo_vout,
-    };
+    let mut inputs = Vec::with_capacity(utxos.len());
+    for (index, utxo) in utxos.iter().enumerate() {
+        if utxo.txid.len() != 64 {
+            return Err(format!(
+                "utxos[{index}].txid must be exactly 64 hex characters"
+            ));
+        }
 
-    let input = TxIn {
-        previous_output: outpoint,
-        script_sig: ScriptBuf::new(),
-        sequence: Sequence::MAX,
-        witness: Witness::new(),
-    };
+        let txid =
+            Txid::from_str(&utxo.txid).map_err(|e| format!("invalid utxos[{index}].txid: {e}"))?;
+        let outpoint = OutPoint {
+            txid,
+            vout: utxo.vout,
+        };
+
+        inputs.push(TxIn {
+            previous_output: outpoint,
+            script_sig: ScriptBuf::new(),
+            sequence: Sequence::MAX,
+            witness: Witness::new(),
+        });
+    }
 
     let op_return_output = TxOut {
         value: Amount::from_sat(0),
@@ -116,7 +137,7 @@ pub fn sign_opreturn_transaction(
     let mut tx = Transaction {
         version: bitcoin::transaction::Version(2),
         lock_time: LockTime::ZERO,
-        input: vec![input],
+        input: inputs,
         output: vec![op_return_output, change_output],
     };
 
@@ -150,32 +171,36 @@ pub fn sign_opreturn_transaction(
     // Reddcoin vs Bitcoin note:
     // * For this legacy P2PKH path, the signing model mirrors Bitcoin's legacy algorithm.
     // * Network version-byte differences affect addresses/UI encoding, but not the ECDSA math.
-    let sighash_cache = SighashCache::new(&mut tx);
-    let sighash = sighash_cache
-        .legacy_signature_hash(0, &p2pkh_script, EcdsaSighashType::All.to_u32())
-        .map_err(|e| format!("failed to construct sighash: {e}"))?;
+    for index in 0..tx.input.len() {
+        let sighash = {
+            let mut sighash_cache = SighashCache::new(&mut tx);
+            sighash_cache
+                .legacy_signature_hash(index, &p2pkh_script, EcdsaSighashType::All.to_u32())
+                .map_err(|e| format!("failed to construct sighash for input {index}: {e}"))?
+        };
 
-    let message = Message::from_digest(*sighash.as_byte_array());
-    let ecdsa_signature = secp.sign_ecdsa(&message, &secret_key);
+        let message = Message::from_digest(*sighash.as_byte_array());
+        let ecdsa_signature = secp.sign_ecdsa(&message, &secret_key);
 
-    // Bitcoin-style scriptSig needs DER signature + one sighash-type byte.
-    let bitcoin_signature = bitcoin::ecdsa::Signature {
-        signature: ecdsa_signature,
-        sighash_type: EcdsaSighashType::All,
-    };
-    let signature_with_hashtype = bitcoin_signature.to_vec();
+        // Bitcoin-style scriptSig needs DER signature + one sighash-type byte.
+        let bitcoin_signature = bitcoin::ecdsa::Signature {
+            signature: ecdsa_signature,
+            sighash_type: EcdsaSighashType::All,
+        };
+        let signature_with_hashtype = bitcoin_signature.to_vec();
 
-    let sig_push = PushBytesBuf::try_from(signature_with_hashtype)
-        .map_err(|e| format!("signature encoding failed push-bytes checks: {e}"))?;
-    let pubkey_push = PushBytesBuf::try_from(bitcoin_pubkey.to_bytes())
-        .map_err(|e| format!("public key encoding failed push-bytes checks: {e}"))?;
+        let sig_push = PushBytesBuf::try_from(signature_with_hashtype)
+            .map_err(|e| format!("signature encoding failed push-bytes checks: {e}"))?;
+        let pubkey_push = PushBytesBuf::try_from(bitcoin_pubkey.to_bytes())
+            .map_err(|e| format!("public key encoding failed push-bytes checks: {e}"))?;
 
-    let script_sig = Builder::new()
-        .push_slice(sig_push)
-        .push_slice(pubkey_push)
-        .into_script();
+        let script_sig = Builder::new()
+            .push_slice(sig_push)
+            .push_slice(pubkey_push)
+            .into_script();
 
-    tx.input[0].script_sig = script_sig;
+        tx.input[index].script_sig = script_sig;
+    }
 
     Ok(serialize_hex(&tx))
 }
