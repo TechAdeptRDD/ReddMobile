@@ -1,15 +1,14 @@
 use std::str::FromStr;
 
 use bitcoin::absolute::LockTime;
-use bitcoin::address::NetworkUnchecked;
 use bitcoin::consensus::encode::{serialize, serialize_hex};
 use bitcoin::hashes::{hash160, Hash};
 use bitcoin::script::{Builder, PushBytesBuf};
 use bitcoin::sighash::{EcdsaSighashType, SighashCache};
 use bitcoin::{
     secp256k1::{Message, PublicKey, Secp256k1, SecretKey},
-    Address, Amount, Network, OutPoint, PublicKey as BitcoinPublicKey, ScriptBuf, Sequence,
-    Transaction, TxIn, TxOut, Txid, Witness,
+    Address, Amount, OutPoint, PublicKey as BitcoinPublicKey, ScriptBuf, Sequence, Transaction,
+    TxIn, TxOut, Txid, Witness,
 };
 use serde::Deserialize;
 
@@ -97,11 +96,10 @@ pub fn sign_opreturn_transaction(
     };
     let op_return_cost = op_return_output.value.to_sat();
 
-    let parsed_address: Address<NetworkUnchecked> = Address::from_str(change_address.trim())
+    let parsed_address = Address::from_str(&change_address)
+        .map(|addr| addr.assume_checked())
         .map_err(|e| format!("invalid change_address: {e}"))?;
-    let _ = parsed_address.clone().require_network(Network::Bitcoin);
-
-    let change_script = parsed_address.assume_checked().script_pubkey();
+    let change_script = parsed_address.script_pubkey();
 
     let mut tx = Transaction {
         version: bitcoin::transaction::Version(2),
