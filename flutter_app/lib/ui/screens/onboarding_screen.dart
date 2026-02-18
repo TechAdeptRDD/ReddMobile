@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:redd_mobile/bloc/onboarding/onboarding_bloc.dart';
 import 'package:redd_mobile/bloc/onboarding/onboarding_event.dart';
 import 'package:redd_mobile/bloc/onboarding/onboarding_state.dart';
+import 'package:redd_mobile/ui/screens/dashboard_screen.dart';
 
 class OnboardingScreen extends StatelessWidget {
   OnboardingScreen({super.key});
@@ -24,11 +25,11 @@ class OnboardingScreen extends StatelessWidget {
           }
 
           if (state is OnboardingComplete) {
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(
-                const SnackBar(content: Text('Welcome to ReddMobile!')),
-              );
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => DashboardScreen(handle: _handleController.text),
+              ),
+            );
           }
         },
         builder: (context, state) {
