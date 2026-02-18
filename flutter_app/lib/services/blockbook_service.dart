@@ -30,6 +30,27 @@ class BlockbookService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  Future<String> broadcastTransaction(String signedTxHex) async {
+    final uri = Uri.parse('$_baseUrl/sendtx/$signedTxHex');
+    final response = await _client.get(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to broadcast transaction (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final responseData = jsonDecode(response.body);
+    if (responseData is Map<String, dynamic>) {
+      final txid = responseData['result'] ?? responseData['txid'];
+      if (txid is String && txid.isNotEmpty) {
+        return txid;
+      }
+    }
+
+    throw Exception('Transaction broadcast response missing txid: ${response.body}');
+  }
+
   void dispose() {
     _client.close();
   }
