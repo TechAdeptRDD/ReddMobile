@@ -1,0 +1,1 @@
+/workspaces/ReddMobile/rust_core/target/release/librust_core.a: /workspaces/ReddMobile/rust_core/src/lib.rs /workspaces/ReddMobile/rust_core/src/transaction_builder.rs /workspaces/ReddMobile/rust_core/src/transaction_signer.rs /workspaces/ReddMobile/rust_core/src/vault_crypto.rs

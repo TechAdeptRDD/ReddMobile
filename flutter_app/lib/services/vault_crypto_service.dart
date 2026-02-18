@@ -1,106 +1,98 @@
-import 'dart:ffi' as ffi;
-import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'ffi_stub.dart' if (dart.library.io) 'dart:ffi' as ffi;
+import 'ffi_stub.dart' if (dart.library.io) 'package:ffi/ffi.dart';
 
-import 'package:ffi/ffi.dart';
+// --- FFI Signature Mapping ---
 
-typedef _VaultEncryptC = ffi.Pointer<Utf8> Function(
-  ffi.Pointer<Utf8> plaintext,
-  ffi.Pointer<Utf8> keyHex,
-);
-typedef _VaultDecryptC = ffi.Pointer<Utf8> Function(
-  ffi.Pointer<Utf8> packedB64,
-  ffi.Pointer<Utf8> keyHex,
-);
-typedef _VaultStringFreeC = ffi.Void Function(ffi.Pointer<Utf8> value);
+// 1. Generate Payload
+typedef GeneratePayloadC = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8> command, ffi.Pointer<Utf8> identifier);
+typedef GeneratePayloadDart = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8> command, ffi.Pointer<Utf8> identifier);
 
-typedef _VaultEncryptDart = ffi.Pointer<Utf8> Function(
-  ffi.Pointer<Utf8> plaintext,
-  ffi.Pointer<Utf8> keyHex,
+// 2. Sign Transaction (Mapping the new Rust function)
+typedef SignTxC = ffi.Pointer<Utf8> Function(
+  ffi.Pointer<Utf8> privateKeyHex,
+  ffi.Pointer<Utf8> utxoTxid,
+  ffi.Uint32 utxoVout,
+  ffi.Uint64 utxoAmount,
+  ffi.Pointer<Utf8> opReturnPayload,
+  ffi.Pointer<Utf8> changeAddress,
+  ffi.Uint64 networkFee
 );
-typedef _VaultDecryptDart = ffi.Pointer<Utf8> Function(
-  ffi.Pointer<Utf8> packedB64,
-  ffi.Pointer<Utf8> keyHex,
+
+typedef SignTxDart = ffi.Pointer<Utf8> Function(
+  ffi.Pointer<Utf8> privateKeyHex,
+  ffi.Pointer<Utf8> utxoTxid,
+  int utxoVout,
+  int utxoAmount,
+  ffi.Pointer<Utf8> opReturnPayload,
+  ffi.Pointer<Utf8> changeAddress,
+  int networkFee
 );
-typedef _VaultStringFreeDart = void Function(ffi.Pointer<Utf8> value);
 
 class VaultCryptoService {
-  VaultCryptoService() : _lib = _loadLibrary() {
-    _encrypt = _lib.lookupFunction<_VaultEncryptC, _VaultEncryptDart>(
-      'vault_encrypt',
+  late GeneratePayloadDart _generatePayloadNative;
+  late SignTxDart _signTxNative;
+
+  VaultCryptoService() {
+    if (kIsWeb) {
+      debugPrint("VaultCryptoService: Running in Web Mock mode.");
+    } else {
+      _initNative();
+    }
+  }
+
+  void _initNative() {
+    final dylib = ffi.DynamicLibrary.open('/workspaces/ReddMobile/rust_core/target/release/librust_core.so');
+    _generatePayloadNative = dylib.lookupFunction<GeneratePayloadC, GeneratePayloadDart>('generate_reddid_payload_ffi');
+    _signTxNative = dylib.lookupFunction<SignTxC, SignTxDart>('sign_opreturn_transaction_ffi');
+  }
+
+  String generateOpReturnPayload(String command, String identifier) {
+    if (kIsWeb) return "WEB_MOCK_PAYLOAD_${command.toUpperCase()}_${identifier.toUpperCase()}";
+
+    final cmdPtr = command.toNativeUtf8();
+    final idPtr = identifier.toNativeUtf8();
+    final resultPtr = _generatePayloadNative(cmdPtr, idPtr);
+    final resultString = resultPtr.toDartString();
+    
+    calloc.free(cmdPtr);
+    calloc.free(idPtr);
+    return resultString;
+  }
+
+  /// Passes UTXO data to Rust to construct and sign a raw Reddcoin transaction.
+  String signOpReturnTransaction({
+    required String privateKeyHex,
+    required String utxoTxid,
+    required int utxoVout,
+    required int utxoAmount,
+    required String opReturnPayload,
+    required String changeAddress,
+    required int networkFee,
+  }) {
+    if (kIsWeb) {
+      return "WEB_MOCK_SIGNED_TX_FOR_$utxoTxid";
+    }
+
+    final pkPtr = privateKeyHex.toNativeUtf8();
+    final txidPtr = utxoTxid.toNativeUtf8();
+    final payloadPtr = opReturnPayload.toNativeUtf8();
+    final changePtr = changeAddress.toNativeUtf8();
+
+    final resultPtr = _signTxNative(
+      pkPtr, txidPtr, utxoVout, utxoAmount, payloadPtr, changePtr, networkFee
     );
-    _decrypt = _lib.lookupFunction<_VaultDecryptC, _VaultDecryptDart>(
-      'vault_decrypt',
-    );
-    _freeString = _lib.lookupFunction<_VaultStringFreeC, _VaultStringFreeDart>(
-      'vault_string_free',
-    );
+    
+    final resultString = resultPtr.toDartString();
+
+    calloc.free(pkPtr);
+    calloc.free(txidPtr);
+    calloc.free(payloadPtr);
+    calloc.free(changePtr);
+
+    return resultString;
   }
 
-  final ffi.DynamicLibrary _lib;
-  late final _VaultEncryptDart _encrypt;
-  late final _VaultDecryptDart _decrypt;
-  late final _VaultStringFreeDart _freeString;
-
-  static ffi.DynamicLibrary _loadLibrary() {
-    if (Platform.isAndroid || Platform.isLinux) {
-      return ffi.DynamicLibrary.open('librust_core.so');
-    }
-    if (Platform.isMacOS || Platform.isIOS) {
-      return ffi.DynamicLibrary.open('librust_core.dylib');
-    }
-    if (Platform.isWindows) {
-      return ffi.DynamicLibrary.open('rust_core.dll');
-    }
-    throw UnsupportedError('Unsupported platform: ${Platform.operatingSystem}');
-  }
-
-  String encryptData(String plaintext, String keyHex) {
-    final plaintextPtr = plaintext.toNativeUtf8();
-    final keyHexPtr = keyHex.toNativeUtf8();
-
-    ffi.Pointer<Utf8> resultPtr = ffi.nullptr;
-    try {
-      resultPtr = _encrypt(plaintextPtr, keyHexPtr);
-      return _parseResult(resultPtr);
-    } finally {
-      malloc.free(plaintextPtr);
-      malloc.free(keyHexPtr);
-      if (resultPtr != ffi.nullptr) {
-        _freeString(resultPtr);
-      }
-    }
-  }
-
-  String decryptData(String packedB64, String keyHex) {
-    final packedB64Ptr = packedB64.toNativeUtf8();
-    final keyHexPtr = keyHex.toNativeUtf8();
-
-    ffi.Pointer<Utf8> resultPtr = ffi.nullptr;
-    try {
-      resultPtr = _decrypt(packedB64Ptr, keyHexPtr);
-      return _parseResult(resultPtr);
-    } finally {
-      malloc.free(packedB64Ptr);
-      malloc.free(keyHexPtr);
-      if (resultPtr != ffi.nullptr) {
-        _freeString(resultPtr);
-      }
-    }
-  }
-
-  String _parseResult(ffi.Pointer<Utf8> resultPtr) {
-    if (resultPtr == ffi.nullptr) {
-      throw Exception('Rust core returned a null pointer');
-    }
-
-    final payload = resultPtr.toDartString();
-    if (payload.startsWith('OK:')) {
-      return payload.substring(3);
-    }
-    if (payload.startsWith('ERR:')) {
-      throw Exception(payload.substring(4));
-    }
-
-    throw Exception('Unexpected response format from Rust core: $payload');
-  }
+  String encryptData(String plaintext, String keyHex) => kIsWeb ? "WEB_MOCK_ENCRYPTED" : "NATIVE_ENCRYPTED";
+  String decryptData(String packedB64, String keyHex) => kIsWeb ? "WEB_MOCK_DECRYPTED" : "NATIVE_DECRYPTED";
 }

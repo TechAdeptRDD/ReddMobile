@@ -1,0 +1,14 @@
+[package]
+name = "rust_core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+bitcoin = { version = "0.32", features = ["secp-recovery"] }
+hex = "0.4"
+aes-gcm = "0.10"
+base64 = "0.21"
+rand = "0.8"
