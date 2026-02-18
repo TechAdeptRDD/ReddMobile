@@ -186,6 +186,42 @@ pub extern "C" fn sign_multi_input_transaction_ffi(
     to_ffi_string(result)
 }
 
+/// Signs a standard P2PKH transfer and returns a raw transaction hex string.
+///
+/// # Safety
+/// * All `*const c_char` inputs must be non-null pointers to valid NUL-terminated UTF-8 strings.
+/// * The returned pointer is allocated by Rust via `CString::into_raw` and must be released by
+///   the caller by invoking `vault_string_free` exactly once.
+/// * The caller must not mutate or free the returned pointer using non-Rust allocators.
+/// * Return payload format is `OK:<raw_tx_hex>` on success and `ERR:<message>` on failure.
+#[unsafe(no_mangle)]
+pub extern "C" fn sign_standard_transfer_ffi(
+    utxos_json: *const c_char,
+    private_key_hex: *const c_char,
+    recipient_address: *const c_char,
+    change_address: *const c_char,
+    amount_to_send: u64,
+    fee_per_kb: u64,
+) -> *mut c_char {
+    let result = (|| {
+        let utxos_json = c_str_arg(utxos_json, "utxos_json")?.to_string();
+        let private_key_hex = c_str_arg(private_key_hex, "private_key_hex")?.to_string();
+        let recipient_address = c_str_arg(recipient_address, "recipient_address")?.to_string();
+        let change_address = c_str_arg(change_address, "change_address")?.to_string();
+
+        transaction_signer::sign_standard_transfer(
+            utxos_json,
+            private_key_hex,
+            recipient_address,
+            change_address,
+            amount_to_send,
+            fee_per_kb,
+        )
+    })();
+
+    to_ffi_string(result)
+}
+
 /// Frees strings allocated by this library.
 #[unsafe(no_mangle)]
 pub extern "C" fn vault_string_free(ptr: *mut c_char) {
