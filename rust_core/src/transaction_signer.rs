@@ -96,10 +96,10 @@ pub fn sign_opreturn_transaction(
     };
     let op_return_cost = op_return_output.value.to_sat();
 
-    let parsed_address = Address::from_str(&change_address)
+    let address = Address::from_str(&change_address)
         .map(|addr| addr.assume_checked())
         .map_err(|e| format!("invalid change_address: {e}"))?;
-    let change_script = parsed_address.script_pubkey();
+    let change_script = address.script_pubkey();
 
     let mut tx = Transaction {
         version: bitcoin::transaction::Version(2),
