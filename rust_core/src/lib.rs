@@ -63,7 +63,7 @@ fn unpack_ciphertext_nonce(packed_b64: &str) -> Result<(&str, &str), String> {
 /// Encrypts plaintext using AES-256-GCM.
 /// Input key must be a 64-char hex string encoding 32 raw bytes.
 /// Returns: `OK:<packed_base64>` or `ERR:<message>`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn vault_encrypt(plaintext: *const c_char, key_hex: *const c_char) -> *mut c_char {
     let result = (|| {
         let plaintext = c_str_arg(plaintext, "plaintext")?;
@@ -79,7 +79,7 @@ pub extern "C" fn vault_encrypt(plaintext: *const c_char, key_hex: *const c_char
 /// Decrypts AES-256-GCM packed payload.
 /// Input key must be a 64-char hex string encoding 32 raw bytes.
 /// Returns: `OK:<plaintext>` or `ERR:<message>`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn vault_decrypt(packed_b64: *const c_char, key_hex: *const c_char) -> *mut c_char {
     let result = (|| {
         let packed_b64 = c_str_arg(packed_b64, "packed_b64")?;
@@ -100,7 +100,7 @@ pub extern "C" fn vault_decrypt(packed_b64: *const c_char, key_hex: *const c_cha
 /// * The returned pointer owns heap-allocated memory from Rust (`CString::into_raw`).
 /// * The caller is responsible for freeing the returned pointer with `vault_string_free` when done.
 /// * The returned string is prefixed as `OK:<hex_payload>` on success or `ERR:<message>` on error.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn generate_reddid_payload_ffi(
     command: *const c_char,
     identifier: *const c_char,
@@ -126,7 +126,7 @@ pub extern "C" fn generate_reddid_payload_ffi(
 ///   the caller by invoking `vault_string_free` exactly once.
 /// * The caller must not mutate or free the returned pointer using non-Rust allocators.
 /// * Return payload format is `OK:<raw_tx_hex>` on success and `ERR:<message>` on failure.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn sign_opreturn_transaction_ffi(
     private_key_hex: *const c_char,
     utxo_txid: *const c_char,
@@ -159,7 +159,7 @@ pub extern "C" fn sign_opreturn_transaction_ffi(
 }
 
 /// Frees strings allocated by this library.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn vault_string_free(ptr: *mut c_char) {
     if ptr.is_null() {
         return;
