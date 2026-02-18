@@ -48,6 +48,44 @@ class VaultCryptoService {
     return result;
   }
 
+  String signStandardTransfer({
+    required List<Map<String, dynamic>> utxos,
+    required String privateKeyHex,
+    required String recipientAddress,
+    required String changeAddress,
+    required int amountToSend,
+    required int feePerKb,
+  }) {
+    // 1. Convert UTXO list to JSON string for Rust
+    final utxosJson = jsonEncode(utxos);
+
+    // 2. Prepare FFI function signature
+    final signFunc = _nativeLib.lookupFunction<
+        ffi.Pointer<Utf8> Function(
+            ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Uint64, ffi.Uint64),
+        ffi.Pointer<Utf8> Function(
+            ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int, int)
+    >('sign_standard_transfer_ffi');
+
+    // 3. Convert Dart strings to C-style strings
+    final utxosPtr = utxosJson.toNativeUtf8();
+    final keyPtr = privateKeyHex.toNativeUtf8();
+    final recipientPtr = recipientAddress.toNativeUtf8();
+    final changePtr = changeAddress.toNativeUtf8();
+
+    // 4. Call the Rust engine
+    final resultPtr = signFunc(utxosPtr, keyPtr, recipientPtr, changePtr, amountToSend, feePerKb);
+    final result = resultPtr.toDartString();
+
+    // 5. Clean up memory (Standard FFI practice)
+    malloc.free(utxosPtr);
+    malloc.free(keyPtr);
+    malloc.free(recipientPtr);
+    malloc.free(changePtr);
+
+    return result;
+  }
+
   // Keep our legacy vault methods here...
   String decryptData(String blob, String password) => "decrypted_key_mock"; 
   String generateOpReturnPayload(String prefix, String handle) => "6a0a${hexEncode(prefix + handle)}";
