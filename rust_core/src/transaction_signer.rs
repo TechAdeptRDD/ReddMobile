@@ -174,3 +174,20 @@ pub fn sign_opreturn_transaction(
 
     Ok(serialize_hex(&tx))
 }
+
+/// Backward-compatible alias for multi-input signing callers.
+pub fn sign_multi_input_transaction(
+    utxos_json: String,
+    private_key_hex: String,
+    op_return_data: String,
+    change_address: String,
+    fee_per_kb: u64,
+) -> Result<String, String> {
+    sign_opreturn_transaction(
+        utxos_json,
+        private_key_hex,
+        op_return_data,
+        change_address,
+        fee_per_kb,
+    )
+}
