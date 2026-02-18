@@ -152,6 +152,40 @@ pub extern "C" fn sign_opreturn_transaction_ffi(
     to_ffi_string(result)
 }
 
+/// Signs a multi-input transaction and returns a raw transaction hex string.
+///
+/// # Safety
+/// * All `*const c_char` inputs must be non-null pointers to valid NUL-terminated UTF-8 strings.
+/// * The returned pointer is allocated by Rust via `CString::into_raw` and must be released by
+///   the caller by invoking `vault_string_free` exactly once.
+/// * The caller must not mutate or free the returned pointer using non-Rust allocators.
+/// * Return payload format is `OK:<raw_tx_hex>` on success and `ERR:<message>` on failure.
+#[unsafe(no_mangle)]
+pub extern "C" fn sign_multi_input_transaction_ffi(
+    utxos_json: *const c_char,
+    priv_key: *const c_char,
+    op_return_data: *const c_char,
+    change_addr: *const c_char,
+    fee_per_kb: u64,
+) -> *mut c_char {
+    let result = (|| {
+        let utxos_json = c_str_arg(utxos_json, "utxos_json")?.to_string();
+        let private_key_hex = c_str_arg(priv_key, "priv_key")?.to_string();
+        let op_return_data = c_str_arg(op_return_data, "op_return_data")?.to_string();
+        let change_address = c_str_arg(change_addr, "change_addr")?.to_string();
+
+        transaction_signer::sign_multi_input_transaction(
+            utxos_json,
+            private_key_hex,
+            op_return_data,
+            change_address,
+            fee_per_kb,
+        )
+    })();
+
+    to_ffi_string(result)
+}
+
 /// Frees strings allocated by this library.
 #[unsafe(no_mangle)]
 pub extern "C" fn vault_string_free(ptr: *mut c_char) {
