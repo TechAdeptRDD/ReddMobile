@@ -91,7 +91,12 @@ class BlockbookService {
       final List<dynamic> txsJson = data['transactions'] ?? data['txs'] ?? [];
 
       return txsJson
-          .map((txJson) => Transaction.fromJson(txJson as Map<String, dynamic>))
+          .map(
+            (txJson) => Transaction.fromBlockbookJson(
+              txJson as Map<String, dynamic>,
+              address,
+            ),
+          )
           .toList()
         ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
     } catch (e) {

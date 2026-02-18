@@ -7,8 +7,8 @@ import 'activity_state.dart';
 class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
   final BlockbookService blockbookService;
 
-  ActivityBloc({required this.blockbookService}) : super(ActivityLoading()) {
-    on<FetchActivityEvent>((event, emit) async {
+  ActivityBloc({required this.blockbookService}) : super(ActivityInitial()) {
+    on<LoadActivity>((event, emit) async {
       emit(ActivityLoading());
 
       try {

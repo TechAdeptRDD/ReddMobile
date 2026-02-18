@@ -2,6 +2,8 @@ import '../../models/transaction.dart';
 
 abstract class ActivityState {}
 
+class ActivityInitial extends ActivityState {}
+
 class ActivityLoading extends ActivityState {}
 
 class ActivityLoaded extends ActivityState {

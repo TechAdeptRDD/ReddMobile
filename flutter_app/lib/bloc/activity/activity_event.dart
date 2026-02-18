@@ -1,7 +1,7 @@
 abstract class ActivityEvent {}
 
-class FetchActivityEvent extends ActivityEvent {
+class LoadActivity extends ActivityEvent {
   final String address;
 
-  FetchActivityEvent(this.address);
+  LoadActivity(this.address);
 }
