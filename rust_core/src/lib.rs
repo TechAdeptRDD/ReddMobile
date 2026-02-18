@@ -1,4 +1,5 @@
 mod transaction_builder;
+mod transaction_signer;
 mod vault_crypto;
 
 use std::ffi::{CStr, CString};
@@ -93,6 +94,47 @@ pub extern "C" fn generate_reddid_payload_ffi(
         let identifier = c_str_arg(identifier, "identifier")?.to_string();
 
         transaction_builder::build_opreturn_payload(command, identifier)
+    })();
+
+    to_ffi_string(result)
+}
+
+
+/// Signs a Reddcoin-style OP_RETURN transaction and returns a raw transaction hex string.
+///
+/// # Safety
+/// * All `*const c_char` inputs must be non-null pointers to valid NUL-terminated UTF-8 strings.
+/// * The returned pointer is allocated by Rust via `CString::into_raw` and must be released by
+///   the caller by invoking `vault_string_free` exactly once.
+/// * The caller must not mutate or free the returned pointer using non-Rust allocators.
+/// * Return payload format is `OK:<raw_tx_hex>` on success and `ERR:<message>` on failure.
+#[no_mangle]
+pub extern "C" fn sign_opreturn_transaction_ffi(
+    private_key_hex: *const c_char,
+    utxo_txid: *const c_char,
+    utxo_vout: u32,
+    utxo_amount: u64,
+    op_return_payload: *const c_char,
+    change_address: *const c_char,
+    network_fee: u64,
+) -> *mut c_char {
+    let result = (|| {
+        // Convert incoming C pointers into validated UTF-8 Rust-owned values before dispatching
+        // into the signer module. This isolates unsafety at the FFI edge.
+        let private_key_hex = c_str_arg(private_key_hex, "private_key_hex")?.to_string();
+        let utxo_txid = c_str_arg(utxo_txid, "utxo_txid")?.to_string();
+        let op_return_payload = c_str_arg(op_return_payload, "op_return_payload")?.to_string();
+        let change_address = c_str_arg(change_address, "change_address")?.to_string();
+
+        transaction_signer::sign_opreturn_transaction(
+            private_key_hex,
+            utxo_txid,
+            utxo_vout,
+            utxo_amount,
+            op_return_payload,
+            change_address,
+            network_fee,
+        )
     })();
 
     to_ffi_string(result)
