@@ -128,26 +128,24 @@ pub extern "C" fn generate_reddid_payload_ffi(
 pub extern "C" fn sign_opreturn_transaction_ffi(
     private_key_hex: *const c_char,
     utxos_json: *const c_char,
-    op_return_payload: *const c_char,
+    op_return_data: *const c_char,
     change_address: *const c_char,
-    network_fee: u64,
+    fee_per_kb: u64,
 ) -> *mut c_char {
     let result = (|| {
         // Convert incoming C pointers into validated UTF-8 Rust-owned values before dispatching
         // into the signer module. This isolates unsafety at the FFI edge.
         let private_key_hex = c_str_arg(private_key_hex, "private_key_hex")?.to_string();
-        let utxos_json = c_str_arg(utxos_json, "utxos_json")?;
-        let utxos: Vec<transaction_signer::UtxoInput> = serde_json::from_str(utxos_json)
-            .map_err(|e| format!("utxos_json must be a valid JSON array of UTXOs: {e}"))?;
-        let op_return_payload = c_str_arg(op_return_payload, "op_return_payload")?.to_string();
+        let utxos_json = c_str_arg(utxos_json, "utxos_json")?.to_string();
+        let op_return_data = c_str_arg(op_return_data, "op_return_data")?.to_string();
         let change_address = c_str_arg(change_address, "change_address")?.to_string();
 
         transaction_signer::sign_opreturn_transaction(
+            utxos_json,
             private_key_hex,
-            utxos,
-            op_return_payload,
+            op_return_data,
             change_address,
-            network_fee,
+            fee_per_kb,
         )
     })();
 
