@@ -150,7 +150,7 @@ pub fn sign_opreturn_transaction(
     // Reddcoin vs Bitcoin note:
     // * For this legacy P2PKH path, the signing model mirrors Bitcoin's legacy algorithm.
     // * Network version-byte differences affect addresses/UI encoding, but not the ECDSA math.
-    let mut sighash_cache = SighashCache::new(&mut tx);
+    let sighash_cache = SighashCache::new(&mut tx);
     let sighash = sighash_cache
         .legacy_signature_hash(0, &p2pkh_script, EcdsaSighashType::All.to_u32())
         .map_err(|e| format!("failed to construct sighash: {e}"))?;
