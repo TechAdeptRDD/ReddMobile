@@ -44,6 +44,22 @@ fn to_ffi_string(result: Result<String, String>) -> *mut c_char {
     }
 }
 
+fn pack_ciphertext_nonce(ciphertext_b64: String, nonce_b64: String) -> String {
+    format!("{ciphertext_b64}:{nonce_b64}")
+}
+
+fn unpack_ciphertext_nonce(packed_b64: &str) -> Result<(&str, &str), String> {
+    let (ciphertext_b64, nonce_b64) = packed_b64
+        .split_once(':')
+        .ok_or_else(|| "packed_b64 must be in `<ciphertext_b64>:<nonce_b64>` format".to_string())?;
+
+    if ciphertext_b64.is_empty() || nonce_b64.is_empty() {
+        return Err("packed_b64 has empty ciphertext or nonce segment".to_string());
+    }
+
+    Ok((ciphertext_b64, nonce_b64))
+}
+
 /// Encrypts plaintext using AES-256-GCM.
 /// Input key must be a 64-char hex string encoding 32 raw bytes.
 /// Returns: `OK:<packed_base64>` or `ERR:<message>`.
@@ -54,6 +70,7 @@ pub extern "C" fn vault_encrypt(plaintext: *const c_char, key_hex: *const c_char
         let mut key = parse_key_hex(key_hex)?;
 
         vault_crypto::encrypt(plaintext, &mut key)
+            .map(|(ciphertext_b64, nonce_b64)| pack_ciphertext_nonce(ciphertext_b64, nonce_b64))
     })();
 
     to_ffi_string(result)
@@ -67,8 +84,9 @@ pub extern "C" fn vault_decrypt(packed_b64: *const c_char, key_hex: *const c_cha
     let result = (|| {
         let packed_b64 = c_str_arg(packed_b64, "packed_b64")?;
         let mut key = parse_key_hex(key_hex)?;
+        let (ciphertext_b64, nonce_b64) = unpack_ciphertext_nonce(packed_b64)?;
 
-        vault_crypto::decrypt(packed_b64, &mut key)
+        vault_crypto::decrypt(ciphertext_b64, nonce_b64, &mut key)
     })();
 
     to_ffi_string(result)

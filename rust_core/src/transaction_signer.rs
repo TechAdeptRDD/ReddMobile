@@ -7,10 +7,10 @@ use bitcoin::hashes::{hash160, Hash};
 use bitcoin::script::{Builder, PushBytesBuf};
 use bitcoin::sighash::{EcdsaSighashType, SighashCache};
 use bitcoin::{
+    secp256k1::{Message, PublicKey, Secp256k1, SecretKey},
     Address, Amount, Network, OutPoint, PublicKey as BitcoinPublicKey, ScriptBuf, Sequence,
     Transaction, TxIn, TxOut, Txid, Witness,
 };
-use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 
 /// Reddcoin's Base58 P2PKH version byte (`R...` legacy addresses).
 ///
@@ -155,8 +155,7 @@ pub fn sign_opreturn_transaction(
         .legacy_signature_hash(0, &p2pkh_script, EcdsaSighashType::All.to_u32())
         .map_err(|e| format!("failed to construct sighash: {e}"))?;
 
-    let message = Message::from_digest_slice(sighash.as_byte_array())
-        .map_err(|e| format!("failed to prepare secp256k1 message: {e}"))?;
+    let message = Message::from_digest(*sighash.as_byte_array());
     let ecdsa_signature = secp.sign_ecdsa(&message, &secret_key);
 
     // Bitcoin-style scriptSig needs DER signature + one sighash-type byte.
