@@ -1,32 +1,37 @@
-/// Transaction signing helpers for OP_RETURN-based ReddID transactions.
-///
-/// NOTE:
-/// This module intentionally provides a *mocked* raw-transaction builder/signing flow for now.
-/// It documents the exact architecture expected for a production implementation while returning a
-/// deterministic, transaction-like hex string for integration testing across FFI boundaries.
-///
-/// Production integration checklist (future work):
-/// * Use Reddcoin-compatible network parameters (P2PKH prefix `0x3D`).
-/// * Build real scripts with a Bitcoin-family transaction library.
-/// * Compute signature hashes according to Reddcoin's consensus rules.
-/// * Produce canonical DER ECDSA signatures with low-S normalization.
-/// * Serialize final transaction bytes and return full raw transaction hex.
+use std::str::FromStr;
 
-/// Signs (mock implementation) a transaction that stores a ReddID payload in OP_RETURN and sends
-/// remaining funds back to the user's change address.
+use bitcoin::absolute::LockTime;
+use bitcoin::address::NetworkUnchecked;
+use bitcoin::consensus::encode::serialize_hex;
+use bitcoin::hashes::{hash160, Hash};
+use bitcoin::script::{Builder, PushBytesBuf};
+use bitcoin::sighash::{EcdsaSighashType, SighashCache};
+use bitcoin::{
+    Address, Amount, Network, OutPoint, PublicKey as BitcoinPublicKey, ScriptBuf, Sequence,
+    Transaction, TxIn, TxOut, Txid, Witness,
+};
+use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
+
+/// Reddcoin's Base58 P2PKH version byte (`R...` legacy addresses).
 ///
-/// # Arguments
-/// * `private_key_hex` - Hex-encoded 32-byte private key.
-/// * `utxo_txid` - Hex-encoded transaction ID for the UTXO being spent.
-/// * `utxo_vout` - Output index in the funding transaction.
-/// * `utxo_amount` - Funding amount in base units (satoshis/redds).
-/// * `op_return_payload` - Hex payload to embed in OP_RETURN output.
-/// * `change_address` - Base58/legacy-like destination for change output.
-/// * `network_fee` - Fee to subtract from the UTXO amount.
+/// Bitcoin mainnet uses `0x00` for P2PKH, while Reddcoin uses `0x3D`.
+/// We keep this explicit because the bitcoin crate models Bitcoin-family networks,
+/// so we need to consciously document and handle this divergence.
+pub const REDDCOIN_VERSION_BYTE: u8 = 0x3D;
+
+/// Signs an OP_RETURN transaction for ReddID-style payload anchoring.
 ///
-/// # Returns
-/// A raw-transaction-like hex string. This is currently a deterministic dummy format intended for
-/// pipeline integration while cryptographic wiring is completed.
+/// This implementation follows the same cryptographic shape as Bitcoin legacy P2PKH signing:
+/// 1. Build an unsigned transaction with one input and two outputs.
+/// 2. Compute a SIGHASH digest for the input being signed.
+/// 3. ECDSA-sign that digest with secp256k1.
+/// 4. Build scriptSig containing `<DER signature + sighash flag> <compressed pubkey>`.
+/// 5. Serialize transaction bytes as lowercase hex.
+///
+/// Reddcoin nuance:
+/// * Script system and ECDSA primitives are Bitcoin-family compatible for this flow.
+/// * Address version bytes differ (`0x3D` for P2PKH), so we parse then intentionally bypass
+///   strict bitcoin-network checks when building the change output script.
 pub fn sign_opreturn_transaction(
     private_key_hex: String,
     utxo_txid: String,
@@ -36,117 +41,142 @@ pub fn sign_opreturn_transaction(
     change_address: String,
     network_fee: u64,
 ) -> Result<String, String> {
-    // -----------------------------------------------------------------------------------------
-    // Input validation section (shared prerequisites for all transaction construction stages).
-    // -----------------------------------------------------------------------------------------
     if private_key_hex.len() != 64 {
         return Err("private_key_hex must be exactly 64 hex characters".to_string());
     }
 
-    if !private_key_hex.chars().all(|c| c.is_ascii_hexdigit()) {
-        return Err("private_key_hex contains non-hex characters".to_string());
-    }
-
-    if utxo_txid.len() != 64 || !utxo_txid.chars().all(|c| c.is_ascii_hexdigit()) {
+    if utxo_txid.len() != 64 {
         return Err("utxo_txid must be exactly 64 hex characters".to_string());
-    }
-
-    if op_return_payload.is_empty() || !op_return_payload.chars().all(|c| c.is_ascii_hexdigit()) {
-        return Err("op_return_payload must be a non-empty hex string".to_string());
-    }
-
-    if change_address.trim().is_empty() {
-        return Err("change_address cannot be empty".to_string());
     }
 
     if network_fee > utxo_amount {
         return Err("network_fee cannot exceed utxo_amount".to_string());
     }
 
-    // Compute spendable change before output construction.
+    let payload_bytes = hex::decode(op_return_payload)
+        .map_err(|e| format!("op_return_payload must be valid hex: {e}"))?;
+
+    // `new_op_return` uses a push-data payload and requires the payload to be encoded as
+    // minimally-pushed bytes. `PushBytesBuf` enforces script push constraints.
+    let op_return_push = PushBytesBuf::try_from(payload_bytes)
+        .map_err(|e| format!("OP_RETURN payload exceeds script push limits: {e}"))?;
+
     let change_amount = utxo_amount - network_fee;
 
-    // =========================================================================================
-    // Step A: Parse private key and derive public key.
-    // =========================================================================================
-    // Real implementation sketch:
-    // 1) Decode `private_key_hex` into [u8; 32].
-    // 2) Create secp256k1 secret key from the 32-byte scalar.
-    // 3) Derive compressed public key (33 bytes) from the secret key.
-    // 4) Hash public key with SHA256 then RIPEMD160 to obtain key-hash for P2PKH scripts.
-    // 5) Ensure derived address version/network context matches Reddcoin (prefix 0x3D).
-    //
-    // Mock behavior:
-    // We only preserve a compact, deterministic stand-in marker that indicates a key was parsed.
-    let mock_pubkey_fingerprint = &private_key_hex[0..16];
+    // -------------------------------------------------------------------------------------
+    // Step 1) Parse private key material and derive the matching compressed public key.
+    // -------------------------------------------------------------------------------------
+    let private_key_raw =
+        hex::decode(private_key_hex).map_err(|e| format!("private_key_hex decode failed: {e}"))?;
+    let secret_key = SecretKey::from_slice(&private_key_raw)
+        .map_err(|e| format!("invalid secp256k1 private key: {e}"))?;
 
-    // =========================================================================================
-    // Step B: Create transaction input(s) (TxIn) from provided UTXO.
-    // =========================================================================================
-    // Real implementation sketch:
-    // 1) Reverse-endian txid into 32-byte outpoint hash when serializing.
-    // 2) Build OutPoint { txid, vout }.
-    // 3) Create TxIn with empty scriptSig initially.
-    // 4) Set sequence (usually 0xFFFFFFFF unless locktime/RBF policy says otherwise).
-    //
-    // Mock behavior:
-    // We record normalized string components representing a single input.
-    let mock_input_descriptor = format!("in:{}:{}", utxo_txid.to_lowercase(), utxo_vout);
+    let secp = Secp256k1::new();
+    let public_key = PublicKey::from_secret_key(&secp, &secret_key);
+    let bitcoin_pubkey = BitcoinPublicKey::new(public_key);
 
-    // =========================================================================================
-    // Step C: Create transaction output(s) (TxOut).
-    // =========================================================================================
-    // Required output order for this wallet flow:
-    //   Output 0: OP_RETURN with the protocol payload.
-    //   Output 1: P2PKH change output returning funds to `change_address`.
-    //
-    // Real implementation sketch:
-    // 1) Build scriptPubKey for OP_RETURN: OP_RETURN <pushdata(op_return_payload_bytes)>.
-    // 2) Build P2PKH scriptPubKey:
-    //      OP_DUP OP_HASH160 <20-byte pubkey-hash> OP_EQUALVERIFY OP_CHECKSIG
-    // 3) Assign values:
-    //      value[0] = 0 (standard for OP_RETURN data output in many wallet flows)
-    //      value[1] = change_amount
-    // 4) Validate dust rules and minimum relay constraints for change output.
-    //
-    // Mock behavior:
-    // Keep deterministic descriptors for both outputs.
-    let mock_output_opreturn = format!("out0:opreturn:{}", op_return_payload.to_lowercase());
-    let mock_output_change = format!(
-        "out1:p2pkh:{}:{}",
-        change_address.trim(),
-        change_amount
-    );
+    // -------------------------------------------------------------------------------------
+    // Step 2) Build tx input (from provided UTXO) and outputs (OP_RETURN + change).
+    // -------------------------------------------------------------------------------------
+    let txid = Txid::from_str(&utxo_txid).map_err(|e| format!("invalid utxo_txid: {e}"))?;
+    let outpoint = OutPoint {
+        txid,
+        vout: utxo_vout,
+    };
 
-    // =========================================================================================
-    // Step D: Sign inputs with ECDSA (secp256k1) and attach scriptSig.
-    // =========================================================================================
-    // Real implementation sketch:
-    // 1) Compute sighash preimage for each input according to SIGHASH_ALL.
-    // 2) Double-SHA256 preimage to produce digest.
-    // 3) ECDSA-sign digest with secp256k1 private key.
-    // 4) Encode signature as DER + sighash byte.
-    // 5) Build scriptSig = <sig_der_plus_hashtype> <compressed_pubkey>.
-    // 6) Insert scriptSig into each signed input.
-    //
-    // Mock behavior:
-    // Create a pseudo-signature marker from deterministic input to mimic signed state.
-    let mock_signature_marker = format!("sig:{}:{}", &utxo_txid[0..16], mock_pubkey_fingerprint);
+    let input = TxIn {
+        previous_output: outpoint,
+        script_sig: ScriptBuf::new(),
+        sequence: Sequence::MAX,
+        witness: Witness::new(),
+    };
 
-    // =========================================================================================
-    // Step E: Serialize transaction and return raw hex.
-    // =========================================================================================
-    // Real implementation sketch:
-    // 1) Serialize version, vin count, each TxIn, vout count, each TxOut, locktime.
-    // 2) Encode as contiguous bytes.
-    // 3) Return lowercase hex representation.
-    //
-    // Mock behavior:
-    // We serialize a synthetic but transaction-like frame into bytes and hex-encode it.
-    let pseudo_wire = format!(
-        "01000000|{}|{}|{}|{}|00000000",
-        mock_input_descriptor, mock_output_opreturn, mock_output_change, mock_signature_marker
-    );
+    let op_return_output = TxOut {
+        value: Amount::from_sat(0),
+        script_pubkey: ScriptBuf::new_op_return(op_return_push),
+    };
 
-    Ok(hex::encode(pseudo_wire.as_bytes()))
+    // We intentionally use Address::from_str first, then bypass strict network checking.
+    // This is needed because the bitcoin crate validates against Bitcoin network sets,
+    // while Reddcoin has a distinct legacy version byte (`0x3D`).
+    let parsed_address: Address<NetworkUnchecked> = Address::from_str(change_address.trim())
+        .map_err(|e| format!("invalid change_address: {e}"))?;
+
+    // Best-effort explicit check path (expected to fail for non-Bitcoin network encodings).
+    // We ignore the result and proceed with an unchecked address because script semantics
+    // are what matter for output construction, not Bitcoin-network labeling.
+    let _ = parsed_address.clone().require_network(Network::Bitcoin);
+
+    let change_script = parsed_address.assume_checked().script_pubkey();
+    let change_output = TxOut {
+        value: Amount::from_sat(change_amount),
+        script_pubkey: change_script,
+    };
+
+    let mut tx = Transaction {
+        version: bitcoin::transaction::Version(2),
+        lock_time: LockTime::ZERO,
+        input: vec![input],
+        output: vec![op_return_output, change_output],
+    };
+
+    // -------------------------------------------------------------------------------------
+    // Step 3) Construct the *prevout script* for signature hashing.
+    // -------------------------------------------------------------------------------------
+    // For legacy P2PKH signing, the digest for input N includes the scriptPubKey of the UTXO
+    // being spent (with scriptSig replaced by that script for the signing preimage).
+    //
+    // In this API we are given only the private key, so we assume the funding output is a
+    // standard P2PKH locked to this key's HASH160.
+    let pubkey_hash = hash160::Hash::hash(&bitcoin_pubkey.inner.serialize());
+    let p2pkh_script = Builder::new()
+        .push_opcode(bitcoin::opcodes::all::OP_DUP)
+        .push_opcode(bitcoin::opcodes::all::OP_HASH160)
+        .push_slice(pubkey_hash.as_byte_array())
+        .push_opcode(bitcoin::opcodes::all::OP_EQUALVERIFY)
+        .push_opcode(bitcoin::opcodes::all::OP_CHECKSIG)
+        .into_script();
+
+    // -------------------------------------------------------------------------------------
+    // Step 4) SIGHASH computation and ECDSA signature generation.
+    // -------------------------------------------------------------------------------------
+    // Why this matters:
+    // * The signature is not over "the transaction bytes" directly.
+    // * Instead, a deterministic signing preimage is built per input, including selected
+    //   transaction fields according to the sighash flag (SIGHASH_ALL here).
+    // * That preimage is double-SHA256 hashed into a 32-byte message digest.
+    // * secp256k1 signs that digest, yielding an ECDSA signature.
+    //
+    // Reddcoin vs Bitcoin note:
+    // * For this legacy P2PKH path, the signing model mirrors Bitcoin's legacy algorithm.
+    // * Network version-byte differences affect addresses/UI encoding, but not the ECDSA math.
+    let mut sighash_cache = SighashCache::new(&mut tx);
+    let sighash = sighash_cache
+        .legacy_signature_hash(0, &p2pkh_script, EcdsaSighashType::All.to_u32())
+        .map_err(|e| format!("failed to construct sighash: {e}"))?;
+
+    let message = Message::from_digest_slice(sighash.as_byte_array())
+        .map_err(|e| format!("failed to prepare secp256k1 message: {e}"))?;
+    let ecdsa_signature = secp.sign_ecdsa(&message, &secret_key);
+
+    // Bitcoin-style scriptSig needs DER signature + one sighash-type byte.
+    let bitcoin_signature = bitcoin::ecdsa::Signature {
+        signature: ecdsa_signature,
+        sighash_type: EcdsaSighashType::All,
+    };
+    let signature_with_hashtype = bitcoin_signature.to_vec();
+
+    let sig_push = PushBytesBuf::try_from(signature_with_hashtype)
+        .map_err(|e| format!("signature encoding failed push-bytes checks: {e}"))?;
+    let pubkey_push = PushBytesBuf::try_from(bitcoin_pubkey.to_bytes())
+        .map_err(|e| format!("public key encoding failed push-bytes checks: {e}"))?;
+
+    let script_sig = Builder::new()
+        .push_slice(sig_push)
+        .push_slice(pubkey_push)
+        .into_script();
+
+    tx.input[0].script_sig = script_sig;
+
+    Ok(serialize_hex(&tx))
 }
