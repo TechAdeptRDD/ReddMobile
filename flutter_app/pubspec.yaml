@@ -38,6 +38,7 @@ dependencies:
   bloc: ^9.2.0
   http: ^1.6.0
   ffi: ^2.2.0
+  flutter_secure_storage: ^10.0.0
 
 dev_dependencies:
   flutter_test:

@@ -128,8 +128,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("CLOSE")),
-          ElevatedButton(onPressed: () {}, child: const Text("BROADCAST")),
+          ElevatedButton(onPressed: () { Navigator.pop(context); context.read<DashboardBloc>().add(BroadcastTransactionEvent(txHex)); }, child: const Text("BROADCAST")),
         ],
+      ),
+    );
+  }
+  void _showBroadcastSuccess(BuildContext context, String txid) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Icon(Icons.check_circle, color: Colors.green, size: 60),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Transaction Broadcasted!", style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            const Text("Your ReddID bid has been sent to the network."),
+            const SizedBox(height: 8),
+            Text("TXID: ${txid.substring(0, 10)}...", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("AWESOME"))],
       ),
     );
   }

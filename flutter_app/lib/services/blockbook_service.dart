@@ -1,91 +1,48 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-class Utxo {
-  final String txid;
-  final int vout;
-  final String value;
-  final int confirmations;
-
-  Utxo({
-    required this.txid,
-    required this.vout,
-    required this.value,
-    required this.confirmations,
-  });
-
-  factory Utxo.fromJson(Map<String, dynamic> json) {
-    return Utxo(
-      txid: json['txid'],
-      vout: json['vout'],
-      value: json['value'],
-      confirmations: json['confirmations'] ?? 0,
-    );
-  }
-}
-
 class BlockbookService {
-  final String _baseUrl = 'https://blockbook.reddcoin.com/api/v2';
-  
-  // Mask our app as a standard client so firewalls don't block us
-  final Map<String, String> _headers = {
-    'User-Agent': 'ReddMobile-Core/1.0',
-    'Accept': 'application/json',
-  };
+  final String baseUrl = "https://live.reddcoin.com/api/v2";
 
+  // Check if a ReddID handle is already taken
   Future<bool> isHandleAvailable(String handle) async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/name/$handle'), headers: _headers);
-      if (response.statusCode == 404) return true;
-      final data = json.decode(response.body);
-      return data == null;
-    } catch (e) {
-      return true; // Graceful degradation
-    }
-  }
-
-  Future<List<Utxo>> getUtxos(String address) async {
-    try {
-      final response = await http.get(Uri.parse('$_baseUrl/utxo/$address'), headers: _headers);
+      // In Reddcoin, handles are usually registered to a specific 'Namespace' address.
+      // We search for transactions containing the OP_RETURN handle string.
+      final response = await http.get(Uri.parse("$baseUrl/search/$handle"));
       
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => Utxo.fromJson(json)).toList();
-      } else {
-        throw Exception('Server rejected request: ${response.statusCode}');
+        final data = jsonDecode(response.body);
+        // If the API returns transactions or owners for this handle, it's taken.
+        return data['results'] == null || (data['results'] as List).isEmpty;
       }
+      return true; // Assume available if search fails (policy decision)
     } catch (e) {
-      print('⚠️ Blockbook Network Warning: $e');
-      // If we are testing the Dev Fund address and the network fails, inject a Mock UTXO
-      // so the app logic and UI testing can proceed uninterrupted.
-      if (address == 'Rmhzj1f9DmyzQnXZKnrXz4F2J2rMrcNf6K') {
-        print('💉 Injecting Mock UTXO for testing purposes...');
-        return [
-          Utxo(
-            txid: '0000000000000000000000000000000000000000000000000000000000000000',
-            vout: 1,
-            value: '50000000000', // 500 RDD
-            confirmations: 999,
-          )
-        ];
-      }
-      throw Exception('Blockbook Network Error: $e');
+      return true;
     }
   }
 
-  Future<String> broadcastTransaction(String rawTxHex) async {
-    try {
-      final response = await http.get(Uri.parse('$_baseUrl/sendtx/$rawTxHex'), headers: _headers);
-      final data = json.decode(response.body);
-      
-      if (data.containsKey('result')) {
-        return data['result'];
-      } else if (data.containsKey('error')) {
-        throw Exception(data['error']['message'] ?? 'Unknown Error');
-      }
-      throw Exception('Invalid response format');
-    } catch (e) {
-      throw Exception('Broadcast Failed: $e');
+  Future<List<dynamic>> getTransactions(String address) async {
+    final response = await http.get(Uri.parse("$baseUrl/address/$address"));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data["transactions"] ?? [];
     }
+    throw Exception("Failed to load transactions");
+  }
+
+  Future<List<dynamic>> getUtxos(String address) async {
+    final response = await http.get(Uri.parse("$baseUrl/utxo/$address"));
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception("Failed to load UTXOs");
+  }
+
+  Future<String> broadcastTransaction(String hex) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/sendtx"),
+      body: hex,
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body)['result'];
+    throw Exception("Broadcast failed: ${response.body}");
   }
 }
