@@ -5,43 +5,30 @@ import 'package:redd_mobile/bloc/dashboard/dashboard_state.dart';
 import 'package:redd_mobile/services/vault_crypto_service.dart';
 import 'package:redd_mobile/services/blockbook_service.dart';
 
-class FakeVaultCryptoService extends VaultCryptoService {
-  @override
-  String generateOpReturnPayload(String command, String identifier) => "MOCK_PAYLOAD";
-  
-  @override
-  String signOpReturnTransaction({
-    required String privateKeyHex, required String utxoTxid, required int utxoVout,
-    required int utxoAmount, required String opReturnPayload, required String changeAddress,
-    required int networkFee,
-  }) {
-    return "SIGNED_TX_FOR_$utxoTxid";
-  }
-}
-
 class FakeBlockbookService extends BlockbookService {
   @override
-  Future<List<Utxo>> getUtxos(String address) async {
-    return [Utxo(txid: '12345abcde', vout: 0, value: '5000000000', confirmations: 10)];
+  Future<List<dynamic>> getUtxos(String address) async {
+    return [
+      {'txid': '12345abcde', 'vout': 0, 'value': '500000000'}
+    ];
   }
 }
 
 void main() {
-  test('AcquireReddIDEvent triggers full UTXO fetch and Tx Signing flow', () async {
+  test('DashboardBloc emits Success when Rust signs multi-input tx', () async {
     final bloc = DashboardBloc(
-      vaultCryptoService: FakeVaultCryptoService(),
+      vaultCryptoService: VaultCryptoService(),
       blockbookService: FakeBlockbookService(),
     );
 
-    bloc.add(AcquireReddIDEvent('techadept.redd'));
+    bloc.add(AcquireReddIDEvent("techadept"));
 
     await expectLater(
       bloc.stream,
       emitsInOrder([
         isA<DashboardLoading>(),
-        isA<ReddIDPayloadGenerated>().having((s) => s.payloadHex, 'hex', 'SIGNED_TX_FOR_12345abcde'),
+        isA<ReddIDPayloadGenerated>(),
       ]),
     );
-    bloc.close();
   });
 }

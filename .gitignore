@@ -1,0 +1,17 @@
+# Rust artifacts
+rust_core/target/
+**/Cargo.lock
+
+# Flutter/Dart artifacts
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+*.flutter-plugins
+*.flutter-plugins-dependencies
+
+# OS/IDE junk
+.DS_Store
+.idea/
+.vscode/
