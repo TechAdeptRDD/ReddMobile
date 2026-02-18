@@ -1,3 +1,4 @@
+mod transaction_builder;
 mod vault_crypto;
 
 use std::ffi::{CStr, CString};
@@ -67,6 +68,31 @@ pub extern "C" fn vault_decrypt(packed_b64: *const c_char, key_hex: *const c_cha
         let mut key = parse_key_hex(key_hex)?;
 
         vault_crypto::decrypt(packed_b64, &mut key)
+    })();
+
+    to_ffi_string(result)
+}
+
+
+/// Generates a hex-encoded ReddID OP_RETURN payload for FFI callers.
+///
+/// # Safety
+/// * `command` and `identifier` must each be valid, non-null pointers to NUL-terminated strings.
+/// * The returned pointer owns heap-allocated memory from Rust (`CString::into_raw`).
+/// * The caller is responsible for freeing the returned pointer with `vault_string_free` when done.
+/// * The returned string is prefixed as `OK:<hex_payload>` on success or `ERR:<message>` on error.
+#[no_mangle]
+pub extern "C" fn generate_reddid_payload_ffi(
+    command: *const c_char,
+    identifier: *const c_char,
+) -> *mut c_char {
+    let result = (|| {
+        // Convert input C strings into validated UTF-8 Rust-owned strings so we can safely pass
+        // them deeper into Rust logic without depending on caller-managed lifetimes.
+        let command = c_str_arg(command, "command")?.to_string();
+        let identifier = c_str_arg(identifier, "identifier")?.to_string();
+
+        transaction_builder::build_opreturn_payload(command, identifier)
     })();
 
     to_ffi_string(result)
