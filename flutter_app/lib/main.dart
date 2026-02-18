@@ -35,9 +35,10 @@ class ReddMobileApp extends StatelessWidget {
           themeMode: ThemeMode.dark,
           theme: ThemeData(
             brightness: Brightness.dark,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFFB71C1C),
-              brightness: Brightness.dark,
+            primaryColor: Colors.redAccent,
+            colorScheme: const ColorScheme.dark(
+              primary: Colors.redAccent,
+              secondary: Colors.redAccent,
             ),
           ),
           home: const OnboardingScreen(),
