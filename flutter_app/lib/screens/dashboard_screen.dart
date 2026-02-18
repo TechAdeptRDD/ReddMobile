@@ -22,7 +22,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(icon: const Icon(Icons.account_balance_wallet_outlined), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.send), onPressed: () { showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => const SendDialog()); }),
         ],
       ),
       body: Padding(
