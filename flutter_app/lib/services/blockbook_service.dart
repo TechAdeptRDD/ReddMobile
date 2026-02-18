@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import '../models/transaction.dart';
+
 class Utxo {
   final String txid;
   final int vout;
@@ -70,6 +72,30 @@ class BlockbookService {
         ];
       }
       throw Exception('Blockbook Network Error: $e');
+    }
+  }
+
+
+  Future<List<Transaction>> getTransactions(String address) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/address/$address?details=txs'),
+        headers: _headers,
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Server rejected request: ${response.statusCode}');
+      }
+
+      final Map<String, dynamic> data = json.decode(response.body);
+      final List<dynamic> txsJson = data['transactions'] ?? data['txs'] ?? [];
+
+      return txsJson
+          .map((txJson) => Transaction.fromJson(txJson as Map<String, dynamic>))
+          .toList()
+        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    } catch (e) {
+      throw Exception('Failed to fetch transactions: $e');
     }
   }
 
