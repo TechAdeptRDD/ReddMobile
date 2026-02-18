@@ -1,11 +1,12 @@
-use aes_gcm::{Aes256Gcm, KeyInit, Nonce, aead::Aead};
+use aes_gcm::{Aes256Gcm, KeyInit, aead::Aead, Nonce};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use rand::Rng;
 
 pub fn encrypt(plaintext: &str, key: &[u8; 32]) -> Result<(String, String), String> {
     let cipher = Aes256Gcm::new_from_slice(key).map_err(|e| format!("invalid key: {e}"))?;
 
     let mut nonce_bytes = [0u8; 12];
-    rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut nonce_bytes);
+    rand::thread_rng().fill(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
 
     let ciphertext = cipher
