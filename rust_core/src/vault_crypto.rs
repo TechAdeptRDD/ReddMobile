@@ -6,7 +6,8 @@ pub fn encrypt(plaintext: &str, key: &[u8; 32]) -> Result<(String, String), Stri
     let cipher = Aes256Gcm::new_from_slice(key).map_err(|e| format!("invalid key: {e}"))?;
 
     let mut nonce_bytes = [0u8; 12];
-    thread_rng().fill_bytes(&mut nonce_bytes);
+    let mut rng = thread_rng();
+    RngCore::fill_bytes(&mut rng, &mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
 
     let ciphertext = cipher
