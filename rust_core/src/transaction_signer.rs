@@ -144,7 +144,7 @@ pub fn sign_opreturn_transaction(
 
     for index in 0..tx.input.len() {
         let sighash = {
-            let mut sighash_cache = SighashCache::new(&mut tx);
+            let sighash_cache = SighashCache::new(&mut tx);
             sighash_cache
                 .legacy_signature_hash(index, &p2pkh_script, EcdsaSighashType::All.to_u32())
                 .map_err(|e| format!("failed to construct sighash for input {index}: {e}"))?
@@ -188,4 +188,144 @@ pub fn sign_multi_input_transaction(
         change_address,
         fee_per_kb,
     )
+}
+
+/// Signs a standard P2PKH transfer with recipient and change outputs.
+pub fn sign_standard_transfer(
+    utxos_json: String,
+    private_key_hex: String,
+    recipient_address: String,
+    change_address: String,
+    amount_to_send: u64,
+    fee_per_kb: u64,
+) -> Result<String, String> {
+    if private_key_hex.len() != 64 {
+        return Err("private_key_hex must be exactly 64 hex characters".to_string());
+    }
+
+    let utxos: Vec<Utxo> = serde_json::from_str(&utxos_json)
+        .map_err(|e| format!("utxos_json must be a valid JSON array of UTXOs: {e}"))?;
+
+    if utxos.is_empty() {
+        return Err("at least one UTXO input is required".to_string());
+    }
+
+    let total_input_amount = utxos.iter().try_fold(0u64, |acc, utxo| {
+        acc.checked_add(utxo.amount)
+            .ok_or_else(|| "total input amount overflowed u64".to_string())
+    })?;
+
+    let private_key_raw =
+        hex::decode(private_key_hex).map_err(|e| format!("private_key_hex decode failed: {e}"))?;
+    let secret_key = SecretKey::from_slice(&private_key_raw)
+        .map_err(|e| format!("invalid secp256k1 private key: {e}"))?;
+
+    let secp = Secp256k1::new();
+    let public_key = PublicKey::from_secret_key(&secp, &secret_key);
+    let bitcoin_pubkey = BitcoinPublicKey::new(public_key);
+
+    let mut inputs = Vec::with_capacity(utxos.len());
+    for (index, utxo) in utxos.iter().enumerate() {
+        if utxo.txid.len() != 64 {
+            return Err(format!(
+                "utxos[{index}].txid must be exactly 64 hex characters"
+            ));
+        }
+
+        let txid =
+            Txid::from_str(&utxo.txid).map_err(|e| format!("invalid utxos[{index}].txid: {e}"))?;
+
+        inputs.push(TxIn {
+            previous_output: OutPoint {
+                txid,
+                vout: utxo.vout,
+            },
+            script_sig: ScriptBuf::new(),
+            sequence: Sequence::MAX,
+            witness: Witness::new(),
+        });
+    }
+
+    let recipient_script = Address::from_str(&recipient_address)
+        .map(|addr| addr.assume_checked())
+        .map_err(|e| format!("invalid recipient_address: {e}"))?
+        .script_pubkey();
+    let change_script = Address::from_str(&change_address)
+        .map(|addr| addr.assume_checked())
+        .map_err(|e| format!("invalid change_address: {e}"))?
+        .script_pubkey();
+
+    let mut tx = Transaction {
+        version: bitcoin::transaction::Version(2),
+        lock_time: LockTime::ZERO,
+        input: inputs,
+        output: vec![
+            TxOut {
+                value: Amount::from_sat(amount_to_send),
+                script_pubkey: recipient_script,
+            },
+            TxOut {
+                value: Amount::from_sat(0),
+                script_pubkey: change_script,
+            },
+        ],
+    };
+
+    let estimated_size = serialize(&tx).len() as u64;
+    let fee_numerator = estimated_size
+        .checked_mul(fee_per_kb)
+        .and_then(|v| v.checked_add(999))
+        .ok_or_else(|| "fee calculation overflowed u64".to_string())?;
+    let absolute_fee = fee_numerator / 1000;
+
+    let required_amount = amount_to_send
+        .checked_add(absolute_fee)
+        .ok_or_else(|| "required amount overflowed u64".to_string())?;
+
+    if required_amount > total_input_amount {
+        return Err(format!(
+            "insufficient funds: inputs={total_input_amount}, required={required_amount} (send={amount_to_send}, fee={absolute_fee})"
+        ));
+    }
+
+    tx.output[1].value = Amount::from_sat(total_input_amount - required_amount);
+
+    let pubkey_hash = hash160::Hash::hash(&bitcoin_pubkey.inner.serialize());
+    let p2pkh_script = Builder::new()
+        .push_opcode(bitcoin::opcodes::all::OP_DUP)
+        .push_opcode(bitcoin::opcodes::all::OP_HASH160)
+        .push_slice(pubkey_hash.as_byte_array())
+        .push_opcode(bitcoin::opcodes::all::OP_EQUALVERIFY)
+        .push_opcode(bitcoin::opcodes::all::OP_CHECKSIG)
+        .into_script();
+
+    for index in 0..tx.input.len() {
+        let sighash = {
+            let sighash_cache = SighashCache::new(&mut tx);
+            sighash_cache
+                .legacy_signature_hash(index, &p2pkh_script, EcdsaSighashType::All.to_u32())
+                .map_err(|e| format!("failed to construct sighash for input {index}: {e}"))?
+        };
+
+        let message = Message::from_digest(*sighash.as_byte_array());
+        let ecdsa_signature = secp.sign_ecdsa(&message, &secret_key);
+
+        let bitcoin_signature = bitcoin::ecdsa::Signature {
+            signature: ecdsa_signature,
+            sighash_type: EcdsaSighashType::All,
+        };
+        let signature_with_hashtype = bitcoin_signature.to_vec();
+
+        let sig_push = PushBytesBuf::try_from(signature_with_hashtype)
+            .map_err(|e| format!("signature encoding failed push-bytes checks: {e}"))?;
+        let pubkey_push = PushBytesBuf::try_from(bitcoin_pubkey.to_bytes())
+            .map_err(|e| format!("public key encoding failed push-bytes checks: {e}"))?;
+
+        tx.input[index].script_sig = Builder::new()
+            .push_slice(sig_push)
+            .push_slice(pubkey_push)
+            .into_script();
+    }
+
+    Ok(serialize_hex(&tx))
 }
