@@ -2,51 +2,85 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class BlockbookService {
-  final String _baseUrl = "https://blockbook.reddcoin.com/api/v2";
+  // The Redundant Node Array
+  final List<String> _baseUrls = [
+    'https://blockbook.reddcoin.com',
+    'https://live.reddcoin.com/api', // Fallback explorer API
+    // We can easily add more community nodes here in the future
+  ];
 
-  Future<Map<String, dynamic>> getAddressDetails(String address) async {
-    try {
-      final response = await http.get(Uri.parse('$_baseUrl/address/$address'));
-      if (response.statusCode == 200) return json.decode(response.body);
-    } catch (e) {
-      print("Blockbook API Error: $e");
-    }
-    return {};
-  }
+  // Helper method to ping nodes in order until one responds
+  Future<http.Response> _reliableGet(String path) async {
+    for (String url in _baseUrls) {
+      try {
+        final res = await http.get(
+          Uri.parse('$url$path'),
+          headers: {'User-Agent': 'ReddMobile-V1'},
+        ).timeout(const Duration(seconds: 5)); // 5-second timeout per node
 
-  Future<double> getLivePrice() async {
-    try {
-      final response = await http.get(Uri.parse('https://api.coingecko.com/api/v3/simple/price?ids=reddcoin&vs_currencies=usd'));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return (data['reddcoin']['usd'] as num).toDouble();
+        if (res.statusCode == 200) return res;
+      } catch (e) {
+        print("Node failed: $url. Trying next fallback...");
+        continue;
       }
-    } catch (e) {
-      print("CoinGecko API Error: $e");
     }
-    return 0.0000;
+    throw Exception("All network nodes are currently unreachable.");
   }
 
-  // Matches DashboardBloc call: blockbookService.getUtxos(...)
+  // 1. Get Address Details (Balance & History)
+  Future<Map<String, dynamic>> getAddressDetails(String address) async {
+    final res = await _reliableGet('/api/v2/address/$address');
+    return json.decode(res.body);
+  }
+
+  // 2. Get UTXOs (Unspent Transaction Outputs)
   Future<List<dynamic>> getUtxos(String address) async {
-    try {
-      final response = await http.get(Uri.parse('$_baseUrl/utxo/$address'));
-      if (response.statusCode == 200) return json.decode(response.body) as List<dynamic>;
-    } catch (e) {
-      print("Blockbook UTXO Error: $e");
+    final res = await _reliableGet('/api/v2/utxo/$address');
+    return json.decode(res.body);
+  }
+
+  // 3. Broadcast Signed Transaction (Uses POST, so we implement the same fallback logic)
+  Future<String> broadcastTransaction(String signedHex) async {
+    for (String url in _baseUrls) {
+      try {
+        final res = await http.post(
+          Uri.parse('$url/api/v2/sendtx/'),
+          headers: {
+            'Content-Type': 'text/plain',
+            'User-Agent': 'ReddMobile-V1'
+          },
+          body: signedHex,
+        ).timeout(const Duration(seconds: 8)); // Slightly longer timeout for broadcasts
+
+        if (res.statusCode == 200) {
+          final data = json.decode(res.body);
+          if (data['result'] != null) return data['result']; // Returns the TXID
+        } else {
+          final errorData = json.decode(res.body);
+          throw Exception("Broadcast rejected: ${errorData['error']}");
+        }
+      } catch (e) {
+        if (e.toString().contains("Broadcast rejected")) rethrow; // If the node actively rejected it, don't try others
+        continue; // Otherwise, try the next node
+      }
     }
-    return [];
+    throw Exception("Failed to connect to the Reddcoin network for broadcast.");
   }
 
-  // Matches ActivityBloc call: blockbookService.getTransactions(...)
-  Future<List<dynamic>> getTransactions(String address) async {
-    final details = await getAddressDetails(address);
-    return details['transactions'] ?? [];
-  }
-
-  // Matches DashboardBloc call: blockbookService.broadcastTransaction(...)
-  Future<String> broadcastTransaction(String rawTxHex) async {
-    // Mock return until we build the actual POST request to the node
-    return "txid_mock_successful_broadcast";
+  // 4. Get Global Network Activity (For the Social Feed)
+  Future<List<dynamic>> getRecentTransactions() async {
+    final res = await _reliableGet('/api/v2/block/last'); // Fetch latest block
+    final blockData = json.decode(res.body);
+    
+    // Fallback logic to grab the previous block if the latest is empty
+    if (blockData['txs'] == null || blockData['txs'].isEmpty) {
+        final prevBlockHash = blockData['previousBlockHash'];
+        if (prevBlockHash != null) {
+            final prevRes = await _reliableGet('/api/v2/block/$prevBlockHash');
+            final prevBlockData = json.decode(prevRes.body);
+            return prevBlockData['txs'] ?? [];
+        }
+    }
+    return blockData['txs'] ?? [];
   }
 }
