@@ -16,51 +16,48 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Setup Rust Toolchain
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android
+          targets: aarch64-linux-android, x86_64-linux-android
 
-      # 2. Setup Android NDK
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
           ndk-version: r25c
 
-      # 3. Build Rust Core
-      - name: Build Rust Libraries
+      - name: Build Rust (Universal)
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
           cargo install cargo-ndk
           cd rust_core
+          # Build for ARM (Real Phones)
           cargo ndk -t arm64-v8a build --release
           mkdir -p ../flutter_app/android/app/src/main/jniLibs/arm64-v8a
           cp target/aarch64-linux-android/release/librust_core.so ../flutter_app/android/app/src/main/jniLibs/arm64-v8a/
+          
+          # Build for x86_64 (Your Emulator)
+          cargo ndk -t x86_64 build --release
+          mkdir -p ../flutter_app/android/app/src/main/jniLibs/x86_64
+          cp target/x86_64-linux-android/release/librust_core.so ../flutter_app/android/app/src/main/jniLibs/x86_64/
 
-      # 4. Setup Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true
 
-      # 5. Build Android APK
       - name: Build APK
         run: |
           cd flutter_app
           flutter pub get
           flutter build apk --debug --dart-define=APP_VERSION=${{ github.ref_name }}
 
-      # 6. Create GitHub Release & Upload APK
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ReddMobile Release ${{ github.ref_name }}
           generate_release_notes: true
-          draft: false
-          prerelease: false
           files: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
