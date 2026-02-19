@@ -54,17 +54,20 @@ jobs:
           flutter pub get
           flutter build apk --debug --dart-define=APP_VERSION=${{ github.ref_name }} --dart-define=VERSION=${{ github.ref_name }}
 
-      # 6. Create GitHub Release & Upload APK
+      # 6. Create GitHub Release with Auto-Notes
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ReddMobile Release ${{ github.ref_name }}
+          # This line triggers GitHub's intelligent changelog generation
+          generate_release_notes: true 
           body: |
-            ## Automated Build for ${{ github.ref_name }}
-            - Native Rust Core (arm64-v8a) included.
-            - Dashboard UI and Activity Feed integrated.
-            - Protocol Path (ReddID + P2PKH) ready for testing.
+            ## 🚀 Performance Insights
+            - Native Rust Engine: Built for ARM64-v8a.
+            - UI Architecture: Flutter 3.x with Glassmorphism.
+            - Version Check: Build number ${{ github.ref_name }} visible in-app.
           draft: false
           prerelease: false
+          files: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
           files: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
