@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:confetti/confetti.dart';
 import '../services/blockbook_service.dart';
 import '../services/vault_crypto_service.dart';
 import '../services/secure_storage_service.dart';
@@ -17,6 +18,7 @@ class _SendDialogState extends State<SendDialog> {
   late TextEditingController _addressController;
   final _amountController = TextEditingController();
   final _memoController = TextEditingController();
+  late ConfettiController _confettiController;
   
   final _blockbook = BlockbookService();
   final _vault = VaultCryptoService();
@@ -25,6 +27,7 @@ class _SendDialogState extends State<SendDialog> {
 
   bool _isProcessing = false;
   bool _isResolving = false;
+  bool _isSuccess = false;
   String _statusMessage = "";
   String? _resolvedAddress;
   String? _resolvedCid;
@@ -33,6 +36,7 @@ class _SendDialogState extends State<SendDialog> {
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
     _loadContacts();
     _addressController = TextEditingController(text: widget.initialRecipient ?? "");
     _addressController.addListener(_onAddressChanged);
@@ -40,6 +44,12 @@ class _SendDialogState extends State<SendDialog> {
     if (widget.initialRecipient != null && widget.initialRecipient!.isNotEmpty) {
       _onAddressChanged();
     }
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadContacts() async {
@@ -66,12 +76,19 @@ class _SendDialogState extends State<SendDialog> {
     }
   }
 
+  void _setSmartTip(String amount, String memo) {
+    setState(() {
+      _amountController.text = amount;
+      _memoController.text = memo;
+    });
+  }
+
   Future<void> _processTransaction() async {
     if (!_formKey.currentState!.validate()) return;
     final finalDestination = _resolvedAddress ?? _addressController.text.trim();
     if (finalDestination.isEmpty) return;
 
-    setState(() { _isProcessing = true; _statusMessage = "Securing network data..."; });
+    setState(() { _isProcessing = true; _statusMessage = "Forging Transaction..."; });
 
     try {
       final double amountRdd = double.parse(_amountController.text.trim());
@@ -97,7 +114,6 @@ class _SendDialogState extends State<SendDialog> {
 
       if (gatheredSats < (amountSats + estimatedFeeSats)) throw Exception("Insufficient funds.");
 
-      setState(() => _statusMessage = "Forging signatures offline...");
       final signedHex = _vault.signMultiInputTransaction(
         privateKeyHex: mnemonic, 
         utxos: selectedUtxos,
@@ -112,15 +128,18 @@ class _SendDialogState extends State<SendDialog> {
       setState(() => _statusMessage = "Broadcasting to miners...");
       final txid = await _blockbook.broadcastTransaction(signedHex);
 
-      // UX Upgrade: Auto-save handle to contacts upon successful tip!
       if (_addressController.text.startsWith('@')) {
          await _storage.addContact(_addressController.text);
       }
 
       setState(() {
-        _statusMessage = "Success! TXID:\n${txid.substring(0, 16)}...";
+        _isSuccess = true;
         _isProcessing = false;
+        _statusMessage = "Tip Sent Successfully!";
       });
+      
+      // Trigger the Redd Rain!
+      _confettiController.play();
 
       await Future.delayed(const Duration(seconds: 4));
       if (mounted) Navigator.pop(context);
@@ -132,109 +151,148 @@ class _SendDialogState extends State<SendDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
-      decoration: const BoxDecoration(color: Color(0xFF151515), borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Send RDD", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 15),
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        Container(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
+          decoration: const BoxDecoration(color: Color(0xFF151515), borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Send RDD", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                const SizedBox(height: 15),
 
-            // UX Upgrade: Quick-Select Contacts Row
-            if (_contacts.isNotEmpty) ...[
-              const Text("Quick Select:", style: TextStyle(color: Colors.grey, fontSize: 12)),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 40,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _contacts.length,
-                  itemBuilder: (context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: ActionChip(
-                        backgroundColor: Colors.black26,
-                        side: const BorderSide(color: Color(0xFFE31B23), width: 1),
-                        label: Text("@${_contacts[index]}", style: const TextStyle(color: Colors.white)),
-                        onPressed: () {
-                          _addressController.text = "@${_contacts[index]}";
-                          _onAddressChanged();
-                        },
-                      ),
-                    );
+                if (_contacts.isNotEmpty) ...[
+                  const Text("Quick Select:", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 40,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _contacts.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: ActionChip(
+                            backgroundColor: Colors.black26,
+                            side: const BorderSide(color: Color(0xFFE31B23), width: 1),
+                            label: Text("@${_contacts[index]}", style: const TextStyle(color: Colors.white)),
+                            onPressed: () {
+                              _addressController.text = "@${_contacts[index]}";
+                              _onAddressChanged();
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                ],
+                
+                if (_isResolving) const Padding(padding: EdgeInsets.only(bottom: 10), child: Text("Resolving ReddID...", style: TextStyle(color: Colors.amber))),
+                if (_resolvedAddress != null)
+                   Padding(
+                     padding: const EdgeInsets.only(bottom: 15),
+                     child: Row(
+                       children: [
+                         CircleAvatar(
+                           radius: 20,
+                           backgroundColor: Colors.white10,
+                           backgroundImage: _resolvedCid != null && _resolvedCid!.isNotEmpty ? NetworkImage("https://gateway.pinata.cloud/ipfs/$_resolvedCid") : null,
+                           child: _resolvedCid == null ? const Icon(Icons.check_circle, color: Colors.green) : null,
+                         ),
+                         const SizedBox(width: 10),
+                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                               const Text("Verified Identity Found", style: TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                               Text(_resolvedAddress!.substring(0, 16) + "...", style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                         ]))
+                       ],
+                     ),
+                   ),
+                TextFormField(
+                  controller: _addressController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(labelText: "Recipient Address or @username", labelStyle: const TextStyle(color: Colors.grey), prefixIcon: const Icon(Icons.send_to_mobile, color: Color(0xFFE31B23)), filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none)),
+                  validator: (val) {
+                     if (val == null || val.isEmpty) return "Required";
+                     if (val.startsWith('@') && _resolvedAddress == null && !_isResolving) return "Identity not found on blockchain.";
+                     return null;
                   },
                 ),
-              ),
-              const SizedBox(height: 15),
-            ],
-            
-            if (_isResolving) const Padding(padding: EdgeInsets.only(bottom: 10), child: Text("Resolving ReddID...", style: TextStyle(color: Colors.amber))),
-            if (_resolvedAddress != null)
-               Padding(
-                 padding: const EdgeInsets.only(bottom: 15),
-                 child: Row(
-                   children: [
-                     CircleAvatar(
-                       radius: 20,
-                       backgroundColor: Colors.white10,
-                       backgroundImage: _resolvedCid != null && _resolvedCid!.isNotEmpty ? NetworkImage("https://gateway.pinata.cloud/ipfs/$_resolvedCid") : null,
-                       child: _resolvedCid == null ? const Icon(Icons.check_circle, color: Colors.green) : null,
-                     ),
-                     const SizedBox(width: 10),
-                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                           const Text("Verified Identity Found", style: TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold)),
-                           Text(_resolvedAddress!.substring(0, 16) + "...", style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                     ]))
-                   ],
-                 ),
-               ),
-            TextFormField(
-              controller: _addressController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(labelText: "Recipient Address or @username", labelStyle: const TextStyle(color: Colors.grey), prefixIcon: const Icon(Icons.send_to_mobile, color: Color(0xFFE31B23)), filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none)),
-              validator: (val) {
-                 if (val == null || val.isEmpty) return "Required";
-                 if (val.startsWith('@') && _resolvedAddress == null && !_isResolving) return "Identity not found on blockchain.";
-                 return null;
-              },
+                const SizedBox(height: 15),
+                
+                // Smart Tip Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildSmartTipButton("50", "☕ Coffee"),
+                    _buildSmartTipButton("100", "🍺 Beer"),
+                    _buildSmartTipButton("500", "🍕 Pizza"),
+                  ],
+                ),
+                const SizedBox(height: 15),
+
+                TextFormField(
+                  controller: _amountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(labelText: "Amount (RDD)", labelStyle: const TextStyle(color: Colors.grey), prefixIcon: const Icon(Icons.monetization_on, color: Color(0xFFE31B23)), filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none)),
+                  validator: (val) {
+                    if (val == null || val.isEmpty) return "Required";
+                    if (double.tryParse(val) == null) return "Invalid number";
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 15),
+                TextFormField(
+                  controller: _memoController,
+                  style: const TextStyle(color: Colors.white),
+                  maxLength: 40,
+                  decoration: InputDecoration(labelText: "Public Memo (Optional)", labelStyle: const TextStyle(color: Colors.grey), prefixIcon: const Icon(Icons.chat_bubble_outline, color: Color(0xFFE31B23)), filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none)),
+                ),
+                const SizedBox(height: 15),
+                
+                if (_statusMessage.isNotEmpty) 
+                  Center(child: Padding(padding: const EdgeInsets.only(bottom: 15.0), child: Text(_statusMessage, style: TextStyle(color: _statusMessage.contains("Error") ? Colors.redAccent : Colors.greenAccent, fontSize: 16, fontWeight: FontWeight.bold)))),
+                
+                if (!_isSuccess)
+                  SizedBox(
+                    width: double.infinity, height: 55,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE31B23), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                      onPressed: _isProcessing ? null : _processTransaction,
+                      child: _isProcessing ? const CircularProgressIndicator(color: Colors.white) : const Text("SEND REDDCOIN", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                const SizedBox(height: 30),
+              ],
             ),
-            const SizedBox(height: 15),
-            TextFormField(
-              controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(labelText: "Amount (RDD)", labelStyle: const TextStyle(color: Colors.grey), prefixIcon: const Icon(Icons.monetization_on, color: Color(0xFFE31B23)), filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none)),
-              validator: (val) {
-                if (val == null || val.isEmpty) return "Required";
-                if (double.tryParse(val) == null) return "Invalid number";
-                return null;
-              },
-            ),
-            const SizedBox(height: 15),
-            TextFormField(
-              controller: _memoController,
-              style: const TextStyle(color: Colors.white),
-              maxLength: 40,
-              decoration: InputDecoration(labelText: "Public Memo (Optional)", labelStyle: const TextStyle(color: Colors.grey), prefixIcon: const Icon(Icons.chat_bubble_outline, color: Color(0xFFE31B23)), filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none)),
-            ),
-            const SizedBox(height: 15),
-            if (_statusMessage.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 15.0), child: Text(_statusMessage, style: TextStyle(color: _statusMessage.contains("Error") ? Colors.redAccent : Colors.greenAccent, fontSize: 14))),
-            SizedBox(
-              width: double.infinity, height: 55,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE31B23), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                onPressed: _isProcessing ? null : _processTransaction,
-                child: _isProcessing ? const CircularProgressIndicator(color: Colors.white) : const Text("SEND REDDCOIN", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-            ),
-            const SizedBox(height: 30),
-          ],
+          ),
         ),
-      ),
+        
+        // The Confetti Cannon!
+        ConfettiWidget(
+          confettiController: _confettiController,
+          blastDirectionality: BlastDirectionality.explosive,
+          emissionFrequency: 0.05,
+          numberOfParticles: 20,
+          gravity: 0.3,
+          colors: const [Colors.red, Color(0xFFE31B23), Colors.white],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSmartTipButton(String amount, String label) {
+    return ActionChip(
+      backgroundColor: Colors.black26,
+      side: const BorderSide(color: Colors.grey, width: 1),
+      label: Text(label, style: const TextStyle(color: Colors.white)),
+      onPressed: () => _setSmartTip(amount, label),
     );
   }
 }

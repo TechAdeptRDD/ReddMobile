@@ -30,6 +30,22 @@ class _DashboardPageState extends State<DashboardPage> {
     return result;
   }
 
+  // Determine Redd Level based on sent tips
+  Map<String, dynamic> _getReddLevel(List<dynamic> history, String myAddress) {
+    int sentCount = 0;
+    for (var tx in history) {
+      for (var vin in tx['vin']) {
+        if (vin['addresses'] != null && vin['addresses'].contains(myAddress)) {
+          sentCount++; break;
+        }
+      }
+    }
+
+    if (sentCount >= 50) return {"title": "Gold ReddHead", "color": Colors.amber};
+    if (sentCount >= 10) return {"title": "Silver ReddHead", "color": Colors.blueGrey.shade300};
+    return {"title": "Bronze ReddHead", "color": Colors.orange.shade800};
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,17 +60,35 @@ class _DashboardPageState extends State<DashboardPage> {
           if (state is DashboardLoading || state is DashboardInitial) return const Center(child: CircularProgressIndicator(color: Color(0xFFE31B23)));
           if (state is DashboardError) return Center(child: Text(state.message, style: const TextStyle(color: Colors.redAccent)));
           if (state is DashboardLoaded) {
+            
+            final level = _getReddLevel(state.history, state.address);
+
             return RefreshIndicator(
               color: const Color(0xFFE31B23), backgroundColor: const Color(0xFF151515),
               onRefresh: () async => context.read<DashboardBloc>().add(LoadDashboardData()),
               child: ListView(
                 padding: const EdgeInsets.all(24),
                 children: [
+                  // Gamified Balance Card
                   Container(
                     padding: const EdgeInsets.all(30),
-                    decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFE31B23), Color(0xFF9E1016)], begin: Alignment.topLeft, end: Alignment.bottomRight), borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: const Color(0xFFE31B23).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))]),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFFE31B23), Color(0xFF9E1016)], begin: Alignment.topLeft, end: Alignment.bottomRight), 
+                      borderRadius: BorderRadius.circular(25), 
+                      border: Border.all(color: level["color"], width: 3), // The Dynamic Border!
+                      boxShadow: [BoxShadow(color: level["color"].withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))]
+                    ),
                     child: Column(
                       children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.stars, color: level["color"], size: 18),
+                            const SizedBox(width: 5),
+                            Text(level["title"], style: TextStyle(color: level["color"], fontSize: 14, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 15),
                         const Text("Total Balance", style: TextStyle(color: Colors.white70, fontSize: 16)),
                         const SizedBox(height: 10),
                         Text("${state.formattedBalance} RDD", style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
@@ -87,7 +121,6 @@ class _DashboardPageState extends State<DashboardPage> {
                       }
                     }
 
-                    // Enriched History: Parse OP_RETURN for Memos
                     for (var vout in tx['vout']) {
                       final String asm = vout['scriptPubKey']['asm'] ?? "";
                       if (asm.contains("OP_RETURN")) {
