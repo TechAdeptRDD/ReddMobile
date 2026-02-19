@@ -1,155 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/dashboard/dashboard_bloc.dart';
-import '../bloc/dashboard/dashboard_event.dart';
-import '../bloc/dashboard/dashboard_state.dart';
+import '../widgets/activity_feed.dart';
+import '../widgets/send_dialog.dart';
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
-
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> {
-  final TextEditingController _handleController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(
-        title: const Text("REDDCOIN ID", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5)),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        title: const Text("REDDMOBILE", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2)),
         actions: [
-          IconButton(icon: const Icon(Icons.send), onPressed: () { showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => const SendDialog()); }),
+          IconButton(
+            icon: const Icon(Icons.send), 
+            onPressed: () { 
+              showModalBottomSheet(
+                context: context, 
+                isScrollControlled: true, 
+                backgroundColor: Colors.transparent, 
+                builder: (context) => const SendDialog()
+              ); 
+            }
+          ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-            const Text("Claim your unique handle on the Reddcoin blockchain.", 
-              style: TextStyle(color: Colors.grey, fontSize: 16)),
-            const SizedBox(height: 32),
-            
-            // Search Bar
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white12),
-              ),
-              child: TextField(
-                controller: _handleController,
-                style: const TextStyle(color: Colors.white, fontSize: 18),
-                decoration: const InputDecoration(
-                  hintText: "Enter handle (e.g. techadept)",
-                  border: InputBorder.none,
-                  suffixText: ".redd",
-                  suffixStyle: TextStyle(color: Color(0xFFE31B23), fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 32),
-            
-            // BLoC State Management for Results
-            Expanded(
-              child: BlocConsumer<DashboardBloc, DashboardState>(
-                listener: (context, state) {
-                  if (state is ReddIDPayloadGenerated) {
-                    _showSuccessDialog(context, state.payloadHex);
-                  }
-                },
-                builder: (context, state) {
-                  if (state is DashboardLoading) {
-                    return const Center(child: CircularProgressIndicator(color: Color(0xFFE31B23)));
-                  }
-                  
-                  if (state is DashboardError) {
-                    return Text(state.message, style: const TextStyle(color: Colors.redAccent));
-                  }
-
-                  return Column(
-                    children: [
-                      const Spacer(),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 60,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFE31B23),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          onPressed: () {
-                            final handle = _handleController.text.trim();
-                            if (handle.isNotEmpty) {
-                              context.read<DashboardBloc>().add(AcquireReddIDEvent(handle));
-                            }
-                          },
-                          child: const Text("CHECK AVAILABILITY & BID", 
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showSuccessDialog(BuildContext context, String txHex) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Transaction Ready"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Rust has successfully signed your ReddID bid transaction!"),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(8),
-              color: Colors.black,
-              child: Text(txHex.substring(0, 40) + "...", 
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Colors.greenAccent)),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("CLOSE")),
-          ElevatedButton(onPressed: () { Navigator.pop(context); context.read<DashboardBloc>().add(BroadcastTransactionEvent(txHex)); }, child: const Text("BROADCAST")),
-        ],
-      ),
-    );
-  }
-  void _showBroadcastSuccess(BuildContext context, String txid) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Icon(Icons.check_circle, color: Colors.green, size: 60),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("Transaction Broadcasted!", style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            const Text("Your ReddID bid has been sent to the network."),
-            const SizedBox(height: 8),
-            Text("TXID: ${txid.substring(0, 10)}...", style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          ],
-        ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("AWESOME"))],
-      ),
+      body: const ActivityFeed(),
     );
   }
 }
