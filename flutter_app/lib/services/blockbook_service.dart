@@ -68,6 +68,20 @@ class BlockbookService {
   }
 
   // 4. Get Global Network Activity (For the Social Feed)
+  // 5. Estimate Network Fee
+  Future<int> estimateFee() async {
+    try {
+      final res = await _reliableGet("/api/v2/estimatefee/2");
+      final data = json.decode(res.body);
+      if (data["result"] != null) {
+        double rddPerKb = double.parse(data["result"]);
+        int sats = (rddPerKb * 100000000).toInt();
+        return sats > 100000 ? sats : 100000; // Floor of 0.001 RDD
+      }
+    } catch (_) { }
+    return 100000; // Safe Fallback
+  }
+
   Future<List<dynamic>> getRecentTransactions() async {
     final res = await _reliableGet('/api/v2/block/last'); // Fetch latest block
     final blockData = json.decode(res.body);

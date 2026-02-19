@@ -117,7 +117,19 @@ class _MainNavigationState extends State<MainNavigation> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.person_search), label: "Identity"),
           BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Wallet"),
-          BottomNavigationBarItem(icon: Icon(Icons.public), label: "Global"),
+          BottomNavigationBarItem(
+            icon: BlocBuilder<ActivityBloc, ActivityState>(
+              builder: (context, state) {
+                bool hasActivity = state is ActivityLoaded && state.transactions.isNotEmpty;
+                return Badge(
+                  isLabelVisible: hasActivity && _currentIndex != 2,
+                  backgroundColor: const Color(0xFFE31B23),
+                  child: const Icon(Icons.public),
+                );
+              },
+            ),
+            label: "Global",
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
         ],
       ),

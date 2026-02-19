@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:confetti/confetti.dart';
 import '../services/blockbook_service.dart';
@@ -30,6 +31,7 @@ class _SendDialogState extends State<SendDialog> {
   bool _isResolving = false;
   bool _isSuccess = false;
   String _statusMessage = "";
+  String _txid = "";
   String? _resolvedAddress;
   String? _resolvedCid;
   List<String> _contacts = [];
@@ -95,7 +97,7 @@ class _SendDialogState extends State<SendDialog> {
     try {
       final double amountRdd = double.parse(_amountController.text.trim());
       final int amountSats = (amountRdd * 100000000).toInt(); 
-      final int estimatedFeeSats = 100000;
+      final int estimatedFeeSats = await _blockbook.estimateFee();
 
       final mnemonic = await _storage.getMnemonic();
       if (mnemonic == null) throw Exception("Wallet locked.");
@@ -143,8 +145,7 @@ class _SendDialogState extends State<SendDialog> {
       // Trigger the Redd Rain!
       _confettiController.play();
 
-      await Future.delayed(const Duration(seconds: 4));
-      if (mounted) Navigator.pop(context);
+        _txid = txid;
 
     } catch (e) {
       setState(() { _statusMessage = "Error: ${e.toString().replaceAll('Exception: ', '')}"; _isProcessing = false; });
@@ -261,6 +262,24 @@ class _SendDialogState extends State<SendDialog> {
                 if (_statusMessage.isNotEmpty) 
                   Center(child: Padding(padding: const EdgeInsets.only(bottom: 15.0), child: Text(_statusMessage, style: TextStyle(color: _statusMessage.contains("Error") ? Colors.redAccent : Colors.greenAccent, fontSize: 16, fontWeight: FontWeight.bold)))),
                 
+                if (_isSuccess) ...[
+                  const Center(child: Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 60)),
+                  const SizedBox(height: 15),
+                  const Center(child: Text("Transaction Confirmed", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity, height: 55,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE31B23), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                      onPressed: () => Share.share("I just tipped ${_addressController.text} on the ReddMobile Network! 🚀\n\nVerify my transaction: https://live.reddcoin.com/tx/$_txid"),
+                      icon: const Icon(Icons.share, color: Colors.white),
+                      label: const Text("SHARE RECEIPT", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(onPressed: () => Navigator.pop(context), child: const Center(child: Text("CLOSE", style: TextStyle(color: Colors.grey)))),
+                ],
+
                 if (!_isSuccess)
                   SizedBox(
                     width: double.infinity, height: 55,
