@@ -4,10 +4,9 @@ use bip39::Mnemonic;
 use rand::Rng;
 use sha2::{Sha256, Digest};
 use ripemd::Ripemd160;
-use k256::elliptic_curve::sec1::ToEncodedPoint;
 use k256::ecdsa::{SigningKey, signature::Signer, Signature};
 use serde::Deserialize;
-use bip32::XPrv;
+use bip32::{XPrv, ChildNumber};
 
 #[no_mangle]
 pub extern "C" fn generate_mnemonic_ffi() -> *mut std::os::raw::c_char {
@@ -28,7 +27,21 @@ pub extern "C" fn derive_address_ffi(mnemonic_ptr: *const std::os::raw::c_char) 
         
         let seed = mnemonic.to_seed("");
         let root_xprv = XPrv::new(&seed).expect("Failed to create root key");
-        let child_xprv = root_xprv.derive_path("m/44'/4'/0'/0/0").expect("Path derivation failed");
+        
+        // Manual BIP44 Derivation Loop (Bypasses all string parsing errors)
+        // m/44'/4'/0'/0/0 (Adding 0x80000000 creates a Hardened ' index)
+        let path = [
+            ChildNumber(44 + 0x80000000),
+            ChildNumber(4 + 0x80000000),
+            ChildNumber(0 + 0x80000000),
+            ChildNumber(0),
+            ChildNumber(0),
+        ];
+        
+        let mut child_xprv = root_xprv;
+        for num in path {
+            child_xprv = child_xprv.derive_child(num).expect("Path derivation failed");
+        }
         
         let pubkey_bytes = child_xprv.public_key().to_bytes();
         let mut sha256_hasher = Sha256::new(); sha256_hasher.update(&pubkey_bytes);
@@ -149,7 +162,7 @@ fn serialize_tx(
     }
 
     tx.write_u32_le(0); 
-    if signing_input_index.is_some() { tx.write_u32_le(1); }
+    if signing_input_index.is_some() { tx.write_u32_le(1); } // SIGHASH_ALL
 
     Ok(tx.buffer)
 }
@@ -163,17 +176,29 @@ pub extern "C" fn build_and_sign_tx_ffi(json_request_ptr: *const std::os::raw::c
             Ok(req) => req, Err(e) => return CString::new(format!("JSON Error: {}", e)).unwrap().into_raw(),
         };
 
-        // 1. Secure Key Derivation
         let mnemonic = match Mnemonic::parse(&request.mnemonic) { Ok(m) => m, Err(_) => return CString::new("Error: Invalid Mnemonic").unwrap().into_raw() };
         let seed = mnemonic.to_seed("");
         let root_xprv = match XPrv::new(&seed) { Ok(k) => k, Err(_) => return CString::new("Error: Root key failed").unwrap().into_raw() };
-        let child_xprv = match root_xprv.derive_path("m/44'/4'/0'/0/0") { Ok(k) => k, Err(_) => return CString::new("Error: Path failed").unwrap().into_raw() };
+        
+        let path = [
+            ChildNumber(44 + 0x80000000),
+            ChildNumber(4 + 0x80000000),
+            ChildNumber(0 + 0x80000000),
+            ChildNumber(0),
+            ChildNumber(0),
+        ];
+        
+        let mut child_xprv = root_xprv;
+        for num in path {
+            child_xprv = match child_xprv.derive_child(num) {
+                Ok(k) => k, Err(_) => return CString::new("Error: Path failed").unwrap().into_raw()
+            };
+        }
         
         let signing_key = SigningKey::from_bytes(&child_xprv.private_key().to_bytes()).expect("Invalid key");
-        let pubkey_bytes = signing_key.verifying_key().to_encoded_point(true);
-        let pub_bytes = pubkey_bytes.as_bytes();
+        let pubkey_array = child_xprv.public_key().to_bytes();
+        let pub_bytes = pubkey_array.as_slice();
         
-        // 2. Output Script Math
         let mut hasher = Sha256::new(); hasher.update(pub_bytes);
         let mut rm160 = Ripemd160::new(); rm160.update(&hasher.finalize());
         let our_script_pubkey = build_p2pkh_script(&rm160.finalize());
@@ -204,7 +229,6 @@ pub extern "C" fn build_and_sign_tx_ffi(json_request_ptr: *const std::os::raw::c
 
         let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
 
-        // 3. The ECDSA Forge
         let mut final_script_sigs: Vec<Vec<u8>> = Vec::new();
         for i in 0..request.utxos.len() {
             let pre_image = match serialize_tx(&request, current_time, &our_script_pubkey, &dest_script, change_script_opt, op_script_opt, request.amount_sats, change_output, Some(i), &[]) {
@@ -228,7 +252,6 @@ pub extern "C" fn build_and_sign_tx_ffi(json_request_ptr: *const std::os::raw::c
             final_script_sigs.push(script_sig);
         }
 
-        // 4. Final Assembly
         let final_tx = match serialize_tx(&request, current_time, &our_script_pubkey, &dest_script, change_script_opt, op_script_opt, request.amount_sats, change_output, None, &final_script_sigs) {
             Ok(b) => b, Err(e) => return CString::new(e).unwrap().into_raw()
         };
