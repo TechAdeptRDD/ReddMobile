@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/dashboard/dashboard_bloc.dart';
 import '../widgets/send_dialog.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'receive_page.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -16,6 +17,13 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     context.read<DashboardBloc>().add(LoadDashboardData());
+  }
+
+  Future<void> _launchNonKyc() async {
+    final Uri url = Uri.parse("https://nonkyc.io/market/RDD_USDT");
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not launch exchange.")));
+    }
   }
 
   void _showSendDialog() {
@@ -80,10 +88,15 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                     child: Column(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.stars, color: level["color"], size: 18),
+                  Row(
+                    children: [
+                      Expanded(child: ElevatedButton.icon(style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), backgroundColor: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), onPressed: _showSendDialog, icon: const Icon(Icons.arrow_upward, color: Colors.white, size: 18), label: const Text("SEND", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)))),
+                      const SizedBox(width: 8),
+                      Expanded(child: ElevatedButton.icon(style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), backgroundColor: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReceivePage())), icon: const Icon(Icons.arrow_downward, color: Colors.white, size: 18), label: const Text("RECEIVE", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)))),
+                      const SizedBox(width: 8),
+                      Expanded(child: ElevatedButton.icon(style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), backgroundColor: const Color(0xFFE31B23), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), onPressed: _launchNonKyc, icon: const Icon(Icons.shopping_cart, color: Colors.white, size: 18), label: const Text("BUY", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)))),
+                    ],
+                  ),
                             const SizedBox(width: 5),
                             Text(level["title"], style: TextStyle(color: level["color"], fontSize: 14, fontWeight: FontWeight.bold)),
                           ],
@@ -102,10 +115,13 @@ class _DashboardPageState extends State<DashboardPage> {
                   const SizedBox(height: 30),
                   Row(
                     children: [
-                      Expanded(child: ElevatedButton.icon(style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), backgroundColor: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), onPressed: _showSendDialog, icon: const Icon(Icons.arrow_upward, color: Colors.white), label: const Text("SEND", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))),
-                      const SizedBox(width: 15),
-                      Expanded(child: ElevatedButton.icon(style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), backgroundColor: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReceivePage())), icon: const Icon(Icons.arrow_downward, color: Colors.white), label: const Text("RECEIVE", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))),
+                      Expanded(child: ElevatedButton.icon(style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), backgroundColor: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), onPressed: _showSendDialog, icon: const Icon(Icons.arrow_upward, color: Colors.white, size: 18), label: const Text("SEND", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)))),
+                      const SizedBox(width: 8),
+                      Expanded(child: ElevatedButton.icon(style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), backgroundColor: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReceivePage())), icon: const Icon(Icons.arrow_downward, color: Colors.white, size: 18), label: const Text("RECEIVE", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)))),
+                      const SizedBox(width: 8),
+                      Expanded(child: ElevatedButton.icon(style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), backgroundColor: const Color(0xFFE31B23), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), onPressed: _launchNonKyc, icon: const Icon(Icons.shopping_cart, color: Colors.white, size: 18), label: const Text("BUY", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)))),
                     ],
+                  ),
                   ),
                   const SizedBox(height: 40),
                   const Text("Recent Transactions", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),

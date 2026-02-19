@@ -58,6 +58,20 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  void _showSocialLinkDialog(String platform) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF151515),
+        title: Text("Link $platform", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text("In V2, this will encrypt your social handle into your ReddID IPFS payload, allowing seamless cross-platform tipping across the web.", style: TextStyle(color: Colors.grey, height: 1.5)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("GOT IT", style: TextStyle(color: Color(0xFFE31B23)))),
+        ],
+      ),
+    );
+  }
+
   void _showPhraseDialog(String message) {
     showDialog(
       context: context,
@@ -97,6 +111,13 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: 40),
               
+              const Text("Web3 Social Identities", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Card(color: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), child: ListTile(leading: const Icon(Icons.alternate_email, color: Colors.lightBlue), title: const Text("Link X / Twitter", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), trailing: const Icon(Icons.add_link, color: Colors.grey), onTap: () => _showSocialLinkDialog("X (Twitter)"))),
+              Card(color: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), child: ListTile(leading: const Icon(Icons.telegram, color: Colors.blueAccent), title: const Text("Link Telegram", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), trailing: const Icon(Icons.add_link, color: Colors.grey), onTap: () => _showSocialLinkDialog("Telegram"))),
+              Card(color: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), child: ListTile(leading: const Icon(Icons.discord, color: Colors.deepPurpleAccent), title: const Text("Link Discord", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), trailing: const Icon(Icons.add_link, color: Colors.grey), onTap: () => _showSocialLinkDialog("Discord"))),
+              const SizedBox(height: 40),
+
               const Text("Address Book", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               if (_contacts.isEmpty)
