@@ -28,8 +28,6 @@ pub extern "C" fn derive_address_ffi(mnemonic_ptr: *const std::os::raw::c_char) 
         let seed = mnemonic.to_seed("");
         let root_xprv = XPrv::new(&seed).expect("Failed to create root key");
         
-        // Manual BIP44 Derivation Loop (Bypasses all string parsing errors)
-        // m/44'/4'/0'/0/0 (Adding 0x80000000 creates a Hardened ' index)
         let path = [
             ChildNumber(44 + 0x80000000),
             ChildNumber(4 + 0x80000000),
@@ -173,7 +171,8 @@ pub extern "C" fn build_and_sign_tx_ffi(json_request_ptr: *const std::os::raw::c
         if json_request_ptr.is_null() { return std::ptr::null_mut(); }
         let json_str = std::ffi::CStr::from_ptr(json_request_ptr).to_str().unwrap_or("");
         let request: TransactionRequest = match serde_json::from_str(json_str) {
-            Ok(req) => req, Err(e) => .format("Error: JSON Parse Fail"), e)).unwrap().into_raw(),
+            Ok(req) => req, 
+            Err(e) => return CString::new(format!("Error: JSON Parse Fail - {}", e)).unwrap().into_raw(),
         };
 
         let mnemonic = match Mnemonic::parse(&request.mnemonic) { Ok(m) => m, Err(_) => return CString::new("Error: Invalid Mnemonic").unwrap().into_raw() };
@@ -203,7 +202,7 @@ pub extern "C" fn build_and_sign_tx_ffi(json_request_ptr: *const std::os::raw::c
         let mut rm160 = Ripemd160::new(); rm160.update(&hasher.finalize());
         let our_script_pubkey = build_p2pkh_script(&rm160.finalize());
 
-        let dest_pkh = match decode_address_to_pkh(&request.destination_address) { Ok(p) => p, Err(e) => return CString::new(e).unwrap().into_raw() };
+        let dest_pkh = match decode_address_to_pkh(&request.destination_address) { Ok(p) => p, Err(e) => return CString::new(format!("Error: {}", e)).unwrap().into_raw() };
         let dest_script = build_p2pkh_script(&dest_pkh);
         
         let mut total_input = 0;
@@ -213,7 +212,7 @@ pub extern "C" fn build_and_sign_tx_ffi(json_request_ptr: *const std::os::raw::c
         let mut change_script_opt = None;
         let change_script_vec: Vec<u8>;
         if change_output > 0 {
-            let change_pkh = match decode_address_to_pkh(&request.change_address) { Ok(p) => p, Err(e) => return CString::new(e).unwrap().into_raw() };
+            let change_pkh = match decode_address_to_pkh(&request.change_address) { Ok(p) => p, Err(e) => return CString::new(format!("Error: {}", e)).unwrap().into_raw() };
             change_script_vec = build_p2pkh_script(&change_pkh);
             change_script_opt = Some(change_script_vec.as_slice());
         }
@@ -232,7 +231,7 @@ pub extern "C" fn build_and_sign_tx_ffi(json_request_ptr: *const std::os::raw::c
         let mut final_script_sigs: Vec<Vec<u8>> = Vec::new();
         for i in 0..request.utxos.len() {
             let pre_image = match serialize_tx(&request, current_time, &our_script_pubkey, &dest_script, change_script_opt, op_script_opt, request.amount_sats, change_output, Some(i), &[]) {
-                Ok(b) => b, Err(e) => return CString::new(e).unwrap().into_raw()
+                Ok(b) => b, Err(e) => return CString::new(format!("Error: {}", e)).unwrap().into_raw()
             };
             
             let mut h1 = Sha256::new(); h1.update(&pre_image);
@@ -253,7 +252,7 @@ pub extern "C" fn build_and_sign_tx_ffi(json_request_ptr: *const std::os::raw::c
         }
 
         let final_tx = match serialize_tx(&request, current_time, &our_script_pubkey, &dest_script, change_script_opt, op_script_opt, request.amount_sats, change_output, None, &final_script_sigs) {
-            Ok(b) => b, Err(e) => return CString::new(e).unwrap().into_raw()
+            Ok(b) => b, Err(e) => return CString::new(format!("Error: {}", e)).unwrap().into_raw()
         };
 
         let raw_hex = hex::encode(final_tx);
