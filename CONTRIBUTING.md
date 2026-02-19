@@ -16,3 +16,10 @@ Ensure you are using the pinned versions in `pubspec.yaml` to satisfy the Dart 3
 * Code must be linted.
 * Rust functions must include unit tests in `lib.rs`.
 * UI changes must be verified on both Small (Pixel 4) and Large (Tablet) screen formats.
+
+## CI & Build Troubleshooting
+### Launcher Icon RangeError
+If the CI fails with `RangeError (index): Index out of range: no indices are valid: 0` during the icon generation step:
+1. Ensure `assets/images/logo.png` is a standard 1024x1024 PNG (no transparency preferred for iOS).
+2. Simplify `pubspec.yaml` by removing `adaptive_icon_background` and `adaptive_icon_foreground`.
+3. Use a static version of `flutter_launcher_icons` (e.g., `0.13.1`).
