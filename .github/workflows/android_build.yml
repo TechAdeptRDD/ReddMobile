@@ -3,15 +3,15 @@ name: Android Release Factory
 on:
   push:
     tags:
-      - 'v*' # Triggers on v1.0, v2.1.0, etc.
-  workflow_dispatch: # Still allows manual runs
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
     name: Build & Release APK
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Crucial for creating a Release
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -52,22 +52,15 @@ jobs:
         run: |
           cd flutter_app
           flutter pub get
-          flutter build apk --debug --dart-define=APP_VERSION=${{ github.ref_name }} --dart-define=VERSION=${{ github.ref_name }}
+          flutter build apk --debug --dart-define=APP_VERSION=${{ github.ref_name }}
 
-      # 6. Create GitHub Release with Auto-Notes
+      # 6. Create GitHub Release & Upload APK
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ReddMobile Release ${{ github.ref_name }}
-          # This line triggers GitHub's intelligent changelog generation
-          generate_release_notes: true 
-          body: |
-            ## 🚀 Performance Insights
-            - Native Rust Engine: Built for ARM64-v8a.
-            - UI Architecture: Flutter 3.x with Glassmorphism.
-            - Version Check: Build number ${{ github.ref_name }} visible in-app.
+          generate_release_notes: true
           draft: false
           prerelease: false
-          files: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
           files: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
