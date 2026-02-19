@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:app_links/app_links.dart';
+import 'pages/lock_page.dart';
 
 import 'bloc/dashboard/dashboard_bloc.dart';
 import 'bloc/activity/activity_bloc.dart';
@@ -44,7 +45,7 @@ class ReddMobileApp extends StatelessWidget {
               return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFE31B23))));
             }
             if (snapshot.hasData && snapshot.data != null) {
-              return const MainNavigation(); 
+              return const LockPage(); 
             }
             return const WelcomePage(); 
           },

@@ -26,12 +26,7 @@ class _ActivityPageState extends State<ActivityPage> {
   }
 
   void _openTipDialog(String username) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => SendDialog(initialRecipient: "@$username"),
-    );
+    showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => SendDialog(initialRecipient: "@$username"));
   }
 
   @override
@@ -55,17 +50,25 @@ class _ActivityPageState extends State<ActivityPage> {
                 itemCount: txs.length,
                 itemBuilder: (context, index) {
                   final tx = txs[index];
-                  String? username;
-                  String? cid;
+                  String? username, cid, memo;
+                  bool isRegistration = false;
+
                   for (var vout in tx['vout']) {
                     final String asm = vout['scriptPubKey']['asm'] ?? "";
-                    if (asm.contains("OP_RETURN") && asm.contains("5244443a49443a")) {
+                    if (asm.contains("OP_RETURN")) {
                        final hexPayload = asm.split("OP_RETURN ")[1];
-                       final parts = _decodeHex(hexPayload).split(":");
-                       if (parts.length >= 4) { username = parts[2]; cid = parts[3]; }
+                       final decoded = _decodeHex(hexPayload);
+                       if (decoded.startsWith("RDD:ID:")) {
+                         isRegistration = true;
+                         final parts = decoded.split(":");
+                         if (parts.length >= 4) { username = parts[2]; cid = parts[3]; }
+                       } else if (decoded.startsWith("RDD:MSG:")) {
+                         memo = decoded.substring(8); // Strip the prefix
+                       }
                     }
                   }
-                  if (username == null) return const SizedBox.shrink(); 
+                  
+                  if (!isRegistration && memo == null) return const SizedBox.shrink(); 
 
                   return Card(
                     color: const Color(0xFF151515),
@@ -76,15 +79,18 @@ class _ActivityPageState extends State<ActivityPage> {
                       leading: CircleAvatar(
                         radius: 25, backgroundColor: Colors.black,
                         backgroundImage: cid != null && cid.isNotEmpty ? NetworkImage("https://gateway.pinata.cloud/ipfs/$cid") : null,
-                        child: cid == null || cid.isEmpty ? const Icon(Icons.person, color: Colors.grey) : null,
+                        child: (cid == null && isRegistration) ? const Icon(Icons.person, color: Colors.grey) : (!isRegistration ? const Icon(Icons.chat_bubble, color: Color(0xFFE31B23)) : null),
                       ),
-                      title: Text("@$username", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                      subtitle: Padding(padding: const EdgeInsets.only(top: 8.0), child: Text("Registered Identity", style: TextStyle(color: Colors.greenAccent.shade400, fontSize: 13))),
-                      trailing: IconButton(
+                      title: Text(isRegistration ? "@$username" : "Network Tip", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 8.0), 
+                        child: Text(isRegistration ? "Registered Identity" : "\"$memo\"", style: TextStyle(color: isRegistration ? Colors.greenAccent.shade400 : Colors.grey, fontSize: 13, fontStyle: isRegistration ? FontStyle.normal : FontStyle.italic))
+                      ),
+                      trailing: isRegistration ? IconButton(
                         icon: const Icon(Icons.volunteer_activism, color: Color(0xFFE31B23)),
                         tooltip: "Tip User",
                         onPressed: () => _openTipDialog(username!),
-                      ),
+                      ) : null,
                     ),
                   );
                 },

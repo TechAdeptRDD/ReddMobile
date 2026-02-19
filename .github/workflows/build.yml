@@ -13,37 +13,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
       - name: Setup Java
         uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-          
+        with: { distribution: 'zulu', java-version: '17' }
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.19.0'
-          channel: 'stable'
-          
+        with: { flutter-version: '3.19.0', channel: 'stable' }
       - name: Install Rust target
         run: rustup target add aarch64-linux-android x86_64-linux-android
-          
       - name: Install cargo-ndk
         run: cargo install cargo-ndk
-
-      - name: Generate Pristine Android Shell & Inject OS Intents
+      - name: Generate Pristine Android Shell & Inject OS Intensions
         run: |
           cd flutter_app
           rm -rf android
           flutter create --platforms android --org com.redd.mobile .
           flutter pub get
           
-          # Inject Deep Link Intent Filter safely via Python
           python3 -c "
-          import re
-          with open('android/app/src/main/AndroidManifest.xml', 'r') as f: data = f.read()
-          intent_filter = '''
+          import os
+          # 1. Modify AndroidManifest.xml
+          manifest = 'android/app/src/main/AndroidManifest.xml'
+          with open(manifest, 'r') as f: d = f.read()
+          d = d.replace('<application', '<uses-permission android:name=\"android.permission.USE_BIOMETRIC\"/>\n    <application')
+          intent = '''
                 <intent-filter>
                     <action android:name=\"android.intent.action.VIEW\" />
                     <category android:name=\"android.intent.category.DEFAULT\" />
@@ -51,46 +44,38 @@ jobs:
                     <data android:scheme=\"redd\" android:host=\"pay\" />
                 </intent-filter>
           '''
-          data = data.replace('</activity>', intent_filter + '</activity>')
-          with open('android/app/src/main/AndroidManifest.xml', 'w') as f: f.write(data)
-          "
+          d = d.replace('</activity>', intent + '</activity>')
+          with open(manifest, 'w') as f: f.write(d)
 
+          # 2. Modify MainActivity.kt for Biometrics
+          kt = 'android/app/src/main/kotlin/com/redd/mobile/MainActivity.kt'
+          if os.path.exists(kt):
+              with open(kt, 'r') as f: k_d = f.read()
+              k_d = k_d.replace('io.flutter.embedding.android.FlutterActivity', 'io.flutter.embedding.android.FlutterFragmentActivity')
+              k_d = k_d.replace('class MainActivity: FlutterActivity()', 'class MainActivity: FlutterFragmentActivity()')
+              with open(kt, 'w') as f: f.write(k_d)
+          "
       - name: Fix Kotlin Duplicate Class Conflict
         run: |
           cat << 'GRADLE_FIX' >> flutter_app/android/build.gradle
-          subprojects {
-              project.configurations.all {
-                  resolutionStrategy.eachDependency { details ->
-                      if (details.requested.group == 'org.jetbrains.kotlin') {
-                          details.useVersion "1.8.22"
-                      }
-                  }
-              }
-          }
+          subprojects { project.configurations.all { resolutionStrategy.eachDependency { details -> if (details.requested.group == 'org.jetbrains.kotlin') { details.useVersion "1.8.22" } } } }
           GRADLE_FIX
-
       - name: Build Rust Core & Inject JNI
         run: |
           cd rust_core
           cargo ndk -t arm64-v8a -t x86_64 -o ../flutter_app/android/app/src/main/jniLibs build --release
-
       - name: Build Flutter APK
-        run: |
-          cd flutter_app
-          flutter build apk --release
-
+        run: cd flutter_app && flutter build apk --release
       - name: Rename APK for Release
         run: |
           TAG_NAME=${GITHUB_REF#refs/tags/}
           mv flutter_app/build/app/outputs/flutter-apk/app-release.apk flutter_app/build/app/outputs/flutter-apk/ReddMobile-${TAG_NAME}.apk
-          
       - name: Generate Bulleted Release Notes
         run: |
           echo "### 🚀 Release ${GITHUB_REF_NAME}" > release_notes.md
           echo "" >> release_notes.md
           echo "**Updates & Fixes:**" >> release_notes.md
           git log -1 --pretty=%B | grep -v "^$" | while read line; do echo "* $line" >> release_notes.md; done
-          
       - name: Publish Official GitHub Release
         uses: softprops/action-gh-release@v2
         with:

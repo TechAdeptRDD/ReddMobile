@@ -16,6 +16,7 @@ class _SendDialogState extends State<SendDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _addressController;
   final _amountController = TextEditingController();
+  final _memoController = TextEditingController();
   
   final _blockbook = BlockbookService();
   final _vault = VaultCryptoService();
@@ -95,6 +96,7 @@ class _SendDialogState extends State<SendDialog> {
         destination: finalDestination,
         amount: amountRdd,
         changeAddress: myAddress,
+        opReturnData: _memoController.text.isNotEmpty ? "RDD:MSG:${_memoController.text}" : null,
       );
 
       if (signedHex.startsWith("Error")) throw Exception(signedHex);
@@ -169,6 +171,13 @@ class _SendDialogState extends State<SendDialog> {
                 if (double.tryParse(val) == null) return "Invalid number";
                 return null;
               },
+            ),
+            const SizedBox(height: 15),
+            TextFormField(
+              controller: _memoController,
+              style: const TextStyle(color: Colors.white),
+              maxLength: 40,
+              decoration: InputDecoration(labelText: "Public Memo (Optional)", labelStyle: const TextStyle(color: Colors.grey), prefixIcon: const Icon(Icons.chat_bubble_outline, color: Color(0xFFE31B23)), filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none)),
             ),
             const SizedBox(height: 25),
             if (_statusMessage.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 15.0), child: Text(_statusMessage, style: TextStyle(color: _statusMessage.contains("Error") ? Colors.redAccent : Colors.greenAccent, fontSize: 14))),
