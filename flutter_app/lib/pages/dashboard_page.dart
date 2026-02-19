@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/dashboard/dashboard_bloc.dart';
 import '../widgets/send_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'scan_page.dart';
 import 'receive_page.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -61,7 +62,7 @@ class _DashboardPageState extends State<DashboardPage> {
       appBar: AppBar(
         title: const Text("ReddMobile Vault", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent, elevation: 0,
-        actions: [ IconButton(icon: const Icon(Icons.refresh, color: Colors.white), onPressed: () => context.read<DashboardBloc>().add(LoadDashboardData())) ],
+        actions: [ IconButton(icon: const Icon(Icons.qr_code_scanner, color: Colors.white), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanPage()))), IconButton(icon: const Icon(Icons.refresh, color: Colors.white), onPressed: () => context.read<DashboardBloc>().add(LoadDashboardData())) ],
       ),
       body: BlocBuilder<DashboardBloc, DashboardState>(
         builder: (context, state) {

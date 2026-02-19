@@ -140,6 +140,11 @@ class _SettingsPageState extends State<SettingsPage> {
               Card(color: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), child: ListTile(leading: const Icon(Icons.discord, color: Colors.deepPurpleAccent), title: const Text("Link Discord", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), subtitle: const Text("Generate Bio Signature", style: TextStyle(color: Colors.grey, fontSize: 12)), trailing: const Icon(Icons.chevron_right, color: Colors.grey), onTap: () => _generateAndShowSignature("Discord"))),
               const SizedBox(height: 40),
 
+              const Text("Localization", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Card(color: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), child: ListTile(leading: const Icon(Icons.public, color: Colors.tealAccent), title: const Text("Local Currency", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), subtitle: const Text("Change fiat display", style: TextStyle(color: Colors.grey, fontSize: 12)), trailing: DropdownButton<String>(dropdownColor: const Color(0xFF151515), style: const TextStyle(color: Colors.white), underline: const SizedBox(), icon: const Icon(Icons.arrow_drop_down, color: Colors.grey), items: ["usd", "eur", "gbp", "jpy", "cad"].map((String value) => DropdownMenuItem<String>(value: value, child: Text(value.toUpperCase()))).toList(), onChanged: (val) async { if (val != null) { await _storage.saveFiatPreference(val); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Currency updated to ${val.toUpperCase()}"), backgroundColor: const Color(0xFFE31B23))); } }))),
+              const SizedBox(height: 40),
+
               const Text("Security Vault", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Card(

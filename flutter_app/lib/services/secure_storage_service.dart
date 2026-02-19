@@ -61,6 +61,10 @@ class SecureStorageService {
     }
   }
 
+  // --- Localization ---
+  Future<void> saveFiatPreference(String currency) async { await _storage.write(key: "fiat_pref", value: currency); }
+  Future<String> getFiatPreference() async { return await _storage.read(key: "fiat_pref") ?? "usd"; }
+
   Future<void> removeContact(String handle) async {
     final contacts = await getContacts();
     contacts.removeWhere((c) => c['handle'] == handle);
