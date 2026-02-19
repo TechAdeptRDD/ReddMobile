@@ -1,18 +1,22 @@
-name: Android Build (Rust + Flutter)
+name: Android Release Factory
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    tags:
+      - 'v*' # Triggers on v1.0, v2.1.0, etc.
+  workflow_dispatch: # Still allows manual runs
 
 jobs:
   build:
+    name: Build & Release APK
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: write # Crucial for creating a Release
+
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Setup Rust
+      # 1. Setup Rust Toolchain
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -25,40 +29,42 @@ jobs:
         with:
           ndk-version: r25c
 
-      # 3. Install cargo-ndk (The Bridge)
-      - name: Install cargo-ndk
-        run: cargo install cargo-ndk
-
-      # 4. Build Rust Core using cargo-ndk
+      # 3. Build Rust Core
       - name: Build Rust Libraries
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
+          cargo install cargo-ndk
           cd rust_core
-          # cargo-ndk handles the CC and AR environment variables for us
           cargo ndk -t arm64-v8a build --release
-          
-          # Move binary to Flutter's jniLibs folder
           mkdir -p ../flutter_app/android/app/src/main/jniLibs/arm64-v8a
           cp target/aarch64-linux-android/release/librust_core.so ../flutter_app/android/app/src/main/jniLibs/arm64-v8a/
 
-      # 5. Setup Flutter
+      # 4. Setup Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
 
-      # 6. Build Android APK
+      # 5. Build Android APK
       - name: Build APK
         run: |
           cd flutter_app
           flutter pub get
-          flutter build apk --debug
+          flutter build apk --debug --dart-define=VERSION=${{ github.ref_name }}
 
-      # 7. Upload the Result
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      # 6. Create GitHub Release & Upload APK
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: reddmobile-debug-apk
-          path: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
+          tag_name: ${{ github.ref_name }}
+          name: ReddMobile Release ${{ github.ref_name }}
+          body: |
+            ## Automated Build for ${{ github.ref_name }}
+            - Native Rust Core (arm64-v8a) included.
+            - Dashboard UI and Activity Feed integrated.
+            - Protocol Path (ReddID + P2PKH) ready for testing.
+          draft: false
+          prerelease: false
+          files: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
