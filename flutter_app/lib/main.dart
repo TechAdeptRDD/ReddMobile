@@ -3,9 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'bloc/dashboard/dashboard_bloc.dart';
 import 'bloc/activity/activity_bloc.dart';
 import 'services/blockbook_service.dart';
+import 'services/secure_storage_service.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/social_page.dart';
 import 'pages/activity_page.dart';
+import 'pages/welcome_page.dart';
 
 void main() {
   runApp(const ReddMobileApp());
@@ -17,6 +19,7 @@ class ReddMobileApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final blockbookService = BlockbookService();
+    final storage = SecureStorageService();
 
     return MultiBlocProvider(
       providers: [
@@ -30,7 +33,19 @@ class ReddMobileApp extends StatelessWidget {
           scaffoldBackgroundColor: const Color(0xFF0F0F0F),
           primaryColor: const Color(0xFFE31B23),
         ),
-        home: const MainNavigation(),
+        // Use a FutureBuilder to check for existing credentials on launch
+        home: FutureBuilder<String?>(
+          future: storage.getMnemonic(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFE31B23))));
+            }
+            if (snapshot.hasData && snapshot.data != null) {
+              return const MainNavigation(); // User has a wallet
+            }
+            return const WelcomePage(); // First time user
+          },
+        ),
       ),
     );
   }
@@ -42,12 +57,12 @@ class MainNavigation extends StatefulWidget {
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int _currentIndex = 1; // Start on the Dashboard (middle tab)
+  int _currentIndex = 1; 
   
   final List<Widget> _pages = [
-    const SocialPage(),   // 0: The Registration / Search tab
-    const DashboardPage(),// 1: The Wallet Dashboard
-    const ActivityPage(), // 2: The Global Feed tab
+    const SocialPage(),   
+    const DashboardPage(),
+    const ActivityPage(), 
   ];
 
   @override

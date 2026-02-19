@@ -1,0 +1,132 @@
+import 'package:flutter/material.dart';
+import '../services/vault_crypto_service.dart';
+import '../services/secure_storage_service.dart';
+import '../main.dart';
+
+class WelcomePage extends StatefulWidget {
+  const WelcomePage({super.key});
+
+  @override
+  State<WelcomePage> createState() => _WelcomePageState();
+}
+
+class _WelcomePageState extends State<WelcomePage> {
+  final _vault = VaultCryptoService();
+  final _storage = SecureStorageService();
+  bool _isProcessing = false;
+
+  Future<void> _createNewWallet() async {
+    setState(() => _isProcessing = true);
+    // Call the Rust core to generate a 12-word mnemonic
+    final mnemonic = _vault.generateMnemonic();
+    
+    // In a production app, you would force the user to write this down here.
+    // For this flow, we save it directly to the hardware secure enclave.
+    await _storage.saveMnemonic(mnemonic);
+    
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainNavigation()),
+      );
+    }
+  }
+
+  void _importWallet() {
+    // Simple dialog to paste an existing seed phrase
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF151515),
+        title: const Text("Import Wallet", style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: "Enter 12 or 24 word seed phrase...",
+            hintStyle: const TextStyle(color: Colors.grey),
+            filled: true,
+            fillColor: Colors.black26,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("CANCEL", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE31B23)),
+            onPressed: () async {
+              if (controller.text.trim().split(" ").length >= 12) {
+                await _storage.saveMnemonic(controller.text.trim());
+                if (mounted) {
+                  Navigator.pop(context); // Close dialog
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainNavigation()));
+                }
+              }
+            },
+            child: const Text("IMPORT", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F0F0F),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(30.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(),
+              const Icon(Icons.account_balance_wallet, size: 100, color: Color(0xFFE31B23)),
+              const SizedBox(height: 30),
+              const Text("ReddMobile", style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              const Text("The Decentralized Social Wallet", style: TextStyle(color: Colors.grey, fontSize: 16)),
+              const Spacer(),
+              
+              if (_isProcessing)
+                const CircularProgressIndicator(color: Color(0xFFE31B23))
+              else ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE31B23),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    ),
+                    onPressed: _createNewWallet,
+                    child: const Text("CREATE NEW WALLET", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFE31B23), width: 2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    ),
+                    onPressed: _importWallet,
+                    child: const Text("IMPORT EXISTING", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
