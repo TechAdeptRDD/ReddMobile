@@ -28,17 +28,23 @@ class _SendDialogState extends State<SendDialog> {
   String _statusMessage = "";
   String? _resolvedAddress;
   String? _resolvedCid;
+  List<String> _contacts = [];
 
   @override
   void initState() {
     super.initState();
+    _loadContacts();
     _addressController = TextEditingController(text: widget.initialRecipient ?? "");
     _addressController.addListener(_onAddressChanged);
     
-    // Auto-resolve if a handle was passed in
     if (widget.initialRecipient != null && widget.initialRecipient!.isNotEmpty) {
       _onAddressChanged();
     }
+  }
+
+  Future<void> _loadContacts() async {
+    final contacts = await _storage.getContacts();
+    setState(() => _contacts = contacts);
   }
 
   void _onAddressChanged() async {
@@ -46,13 +52,15 @@ class _SendDialogState extends State<SendDialog> {
     if (text.startsWith('@') && text.length > 3) {
       setState(() { _isResolving = true; _resolvedAddress = null; _resolvedCid = null; });
       final profile = await _resolver.resolveUsername(text);
-      setState(() {
-        _isResolving = false;
-        if (profile != null) {
-          _resolvedAddress = profile["address"];
-          _resolvedCid = profile["cid"];
-        }
-      });
+      if (mounted) {
+        setState(() {
+          _isResolving = false;
+          if (profile != null) {
+            _resolvedAddress = profile["address"];
+            _resolvedCid = profile["cid"];
+          }
+        });
+      }
     } else {
       setState(() { _resolvedAddress = null; _resolvedCid = null; _isResolving = false; });
     }
@@ -104,6 +112,11 @@ class _SendDialogState extends State<SendDialog> {
       setState(() => _statusMessage = "Broadcasting to miners...");
       final txid = await _blockbook.broadcastTransaction(signedHex);
 
+      // UX Upgrade: Auto-save handle to contacts upon successful tip!
+      if (_addressController.text.startsWith('@')) {
+         await _storage.addContact(_addressController.text);
+      }
+
       setState(() {
         _statusMessage = "Success! TXID:\n${txid.substring(0, 16)}...";
         _isProcessing = false;
@@ -129,7 +142,36 @@ class _SendDialogState extends State<SendDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text("Send RDD", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 20),
+            const SizedBox(height: 15),
+
+            // UX Upgrade: Quick-Select Contacts Row
+            if (_contacts.isNotEmpty) ...[
+              const Text("Quick Select:", style: TextStyle(color: Colors.grey, fontSize: 12)),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 40,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _contacts.length,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: ActionChip(
+                        backgroundColor: Colors.black26,
+                        side: const BorderSide(color: Color(0xFFE31B23), width: 1),
+                        label: Text("@${_contacts[index]}", style: const TextStyle(color: Colors.white)),
+                        onPressed: () {
+                          _addressController.text = "@${_contacts[index]}";
+                          _onAddressChanged();
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 15),
+            ],
+            
             if (_isResolving) const Padding(padding: EdgeInsets.only(bottom: 10), child: Text("Resolving ReddID...", style: TextStyle(color: Colors.amber))),
             if (_resolvedAddress != null)
                Padding(
@@ -179,7 +221,7 @@ class _SendDialogState extends State<SendDialog> {
               maxLength: 40,
               decoration: InputDecoration(labelText: "Public Memo (Optional)", labelStyle: const TextStyle(color: Colors.grey), prefixIcon: const Icon(Icons.chat_bubble_outline, color: Color(0xFFE31B23)), filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none)),
             ),
-            const SizedBox(height: 25),
+            const SizedBox(height: 15),
             if (_statusMessage.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 15.0), child: Text(_statusMessage, style: TextStyle(color: _statusMessage.contains("Error") ? Colors.redAccent : Colors.greenAccent, fontSize: 14))),
             SizedBox(
               width: double.infinity, height: 55,
