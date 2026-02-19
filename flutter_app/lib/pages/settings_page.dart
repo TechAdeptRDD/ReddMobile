@@ -64,9 +64,9 @@ class _SettingsPageState extends State<SettingsPage> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF151515),
         title: Text("Link $platform", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text("In V2, this will encrypt your social handle into your ReddID IPFS payload, allowing seamless cross-platform tipping across the web.", style: TextStyle(color: Colors.grey, height: 1.5)),
+        content: const Text("To link this platform, ReddMobile will generate a unique cryptographic signature.\n\nYou will paste this signature into your Web2 bio. Our decentralized oracle will verify it and permanently anchor your identity to the blockchain.", style: TextStyle(color: Colors.grey, height: 1.5)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("GOT IT", style: TextStyle(color: Color(0xFFE31B23)))),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("GENERATE SIGNATURE (SOON)", style: TextStyle(color: Color(0xFFE31B23)))),
         ],
       ),
     );
