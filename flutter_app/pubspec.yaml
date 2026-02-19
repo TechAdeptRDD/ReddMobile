@@ -1,38 +1,40 @@
 name: redd_mobile
-description: A high-security, Rust-powered mobile wallet for the Redd ecosystem.
+description: "A professional Reddcoin wallet with ReddID integration."
 publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.2.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  flutter_bloc: ^8.1.3
-  ffi: ^2.1.0
-  http: ^1.1.0
-  path_provider: ^2.1.1
-  flutter_native_splash: ^2.3.1
-  android_12: true
-  fullscreen: true
+  cupertino_icons: ^1.0.6
+  http: ^1.2.0
   flutter_secure_storage: ^9.0.0
+  qr_flutter: ^4.1.0
+  share_plus: ^7.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo.png"
+  min_sdk_android: 21
 
 flutter_native_splash:
+  color: "#151515"
+  image: "assets/images/logo.png"
   android_12: true
   fullscreen: true
-  color: "#0F0F0F"
-  image: assets/branding/redd_logo_full.png
-  android_12:
-    image: assets/branding/redd_icon.png
-    color: "#0F0F0F"
 
 flutter:
   uses-material-design: true
   assets:
-    - assets/branding/
+    - assets/images/
