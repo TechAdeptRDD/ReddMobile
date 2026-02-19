@@ -46,7 +46,7 @@ jobs:
       - name: Build Flutter APK
         run: |
           cd flutter_app
-          flutter build apk --release --no-pub
+          flutter build apk --release
 
       - name: Rename APK for Release
         run: |
