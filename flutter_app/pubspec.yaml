@@ -20,7 +20,6 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.0
   flutter_launcher_icons: ^0.13.1
-  flutter_native_splash: ^2.4.0
 
 flutter_launcher_icons:
   android: "launcher_icon"
@@ -28,13 +27,3 @@ flutter_launcher_icons:
   image_path: "assets/images/logo.png"
   min_sdk_android: 21
 
-flutter_native_splash:
-  color: "#151515"
-  image: "assets/images/logo.png"
-  android_12: true
-  fullscreen: true
-
-flutter:
-  uses-material-design: true
-  assets:
-    - assets/images/
