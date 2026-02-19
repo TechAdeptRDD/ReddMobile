@@ -1,82 +1,106 @@
-import 'dart:convert';
-import 'dart:ffi' as ffi;
-import 'dart:io';
+import 'dart:ffi';
 import 'package:ffi/ffi.dart';
+import 'dart:io';
 
-typedef GenerateMnemonicC = ffi.Pointer<Utf8> Function();
-typedef GenerateMnemonicDart = ffi.Pointer<Utf8> Function();
-typedef DeriveAddressC = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8> mnemonic);
-typedef DeriveAddressDart = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8> mnemonic);
-typedef FreeStringC = ffi.Void Function(ffi.Pointer<Utf8>);
-typedef FreeStringDart = void Function(ffi.Pointer<Utf8>);
+// --- FFI Signature Definitions ---
+typedef GenerateMnemonicC = Pointer<Utf8> Function();
+typedef GenerateMnemonicDart = Pointer<Utf8> Function();
 
-// NEW: JSON FFI Signature
-typedef BuildAndSignTxC = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8> jsonPayload);
-typedef BuildAndSignTxDart = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8> jsonPayload);
+typedef DeriveAddressC = Pointer<Utf8> Function(Pointer<Utf8> mnemonic);
+typedef DeriveAddressDart = Pointer<Utf8> Function(Pointer<Utf8> mnemonic);
+
+typedef SignTxC = Pointer<Utf8> Function(Pointer<Utf8> jsonRequest);
+typedef SignTxDart = Pointer<Utf8> Function(Pointer<Utf8> jsonRequest);
+
+typedef FreeStringC = Void Function(Pointer<Utf8> ptr);
+typedef FreeStringDart = void Function(Pointer<Utf8> ptr);
 
 class VaultCryptoService {
-  late ffi.DynamicLibrary _nativeLib;
-  late GenerateMnemonicDart _generateMnemonic;
-  late DeriveAddressDart _deriveAddress;
-  late BuildAndSignTxDart _buildAndSignTx;
-  late FreeStringDart _freeString;
+  late DynamicLibrary _rustLib;
 
   VaultCryptoService() {
-    _nativeLib = ffi.DynamicLibrary.open("librust_core.so");
-    _generateMnemonic = _nativeLib.lookup<ffi.NativeFunction<GenerateMnemonicC>>('generate_mnemonic_ffi').asFunction();
-    _deriveAddress = _nativeLib.lookup<ffi.NativeFunction<DeriveAddressC>>('derive_address_ffi').asFunction();
-    _buildAndSignTx = _nativeLib.lookup<ffi.NativeFunction<BuildAndSignTxC>>('build_and_sign_tx_ffi').asFunction();
-    _freeString = _nativeLib.lookup<ffi.NativeFunction<FreeStringC>>('rust_cstr_free').asFunction();
+    _rustLib = Platform.isAndroid 
+        ? DynamicLibrary.open("librust_core.so") 
+        : DynamicLibrary.process(); // Fallback for iOS/Test environments
   }
 
-  String generateNewMnemonic() {
-    final pointer = _generateMnemonic();
-    final mnemonic = pointer.toDartString();
-    _freeString(pointer);
-    return mnemonic;
+  // 1. THE MISSING METHOD: Generate a new 12-word seed phrase via Rust
+  String generateMnemonic() {
+    final generateFunc = _rustLib.lookupFunction<GenerateMnemonicC, GenerateMnemonicDart>('generate_mnemonic_ffi');
+    final freeFunc = _rustLib.lookupFunction<FreeStringC, FreeStringDart>('rust_cstr_free');
+
+    final ptr = generateFunc();
+    final result = ptr.toDartString();
+    freeFunc(ptr); // Prevent memory leak
+    return result;
   }
 
+  // 2. Derive Reddcoin Address
   String deriveReddcoinAddress(String mnemonic) {
+    final deriveFunc = _rustLib.lookupFunction<DeriveAddressC, DeriveAddressDart>('derive_address_ffi');
+    final freeFunc = _rustLib.lookupFunction<FreeStringC, FreeStringDart>('rust_cstr_free');
+
     final mnemonicPtr = mnemonic.toNativeUtf8();
-    final pointer = _deriveAddress(mnemonicPtr);
-    final address = pointer.toDartString();
-    _freeString(pointer);
+    final resultPtr = deriveFunc(mnemonicPtr);
+    
+    final result = resultPtr.toDartString();
+    
     malloc.free(mnemonicPtr);
-    return address;
+    freeFunc(resultPtr);
+    
+    return result;
   }
 
-  // Safely passes complex UTXO data to Rust via JSON
+  // 3. Sign Transaction (Using the JSON protocol we built)
   String signMultiInputTransaction({
-    String privateKeyHex = "", 
-    List<dynamic> utxos = const [],
-    String destination = "", 
-    double amount = 0.0,
-    String changeAddress = "",
-    double feePerKb = 1000.0,
+    required String privateKeyHex, 
+    required List<dynamic> utxos,
+    required String destination,
+    required double amount,
+    required String changeAddress,
     String? opReturnData,
   }) {
-    final requestData = {
-      "private_key_hex": privateKeyHex,
-      "destination_address": destination,
-      "amount_sats": (amount * 100000000).toInt(),
-      "change_address": changeAddress,
-      "fee_sats": 100000, 
-      "utxos": utxos.map((u) => {
-        "txid": u['txid'] ?? "",
-        "vout": u['vout'] ?? 0,
-        "value": int.tryParse(u['value'].toString()) ?? 0
-      }).toList(),
-    };
+    final signFunc = _rustLib.lookupFunction<SignTxC, SignTxDart>('build_and_sign_tx_ffi');
+    final freeFunc = _rustLib.lookupFunction<FreeStringC, FreeStringDart>('rust_cstr_free');
 
-    final jsonString = jsonEncode(requestData);
-    final jsonPtr = jsonString.toNativeUtf8();
+    // Convert flutter utxos map into the JSON format expected by our Rust struct
+    String utxoJson = "[";
+    for(int i = 0; i < utxos.length; i++) {
+       final txid = utxos[i]['txid'];
+       final vout = utxos[i]['vout'];
+       final value = utxos[i]['value'];
+       utxoJson += '{"txid":"$txid","vout":$vout,"value":$value}';
+       if(i < utxos.length - 1) utxoJson += ",";
+    }
+    utxoJson += "]";
+
+    // We hardcode 0.001 RDD fee for now.
+    final int amountSats = (amount * 100000000).toInt();
+    final int feeSats = 100000;
+
+    String jsonRequest = '''
+    {
+      "mnemonic": "$privateKeyHex",
+      "destination_address": "$destination",
+      "amount_sats": $amountSats,
+      "change_address": "$changeAddress",
+      "fee_sats": $feeSats,
+      "utxos": $utxoJson
+    ''';
+
+    if (opReturnData != null) {
+      jsonRequest += ',\n"op_return_data": "$opReturnData"';
+    }
+    jsonRequest += '\n}';
+
+    final jsonPtr = jsonRequest.toNativeUtf8();
+    final resultPtr = signFunc(jsonPtr);
     
-    final resultPtr = _buildAndSignTx(jsonPtr);
-    final responseStr = resultPtr.toDartString();
+    final signedHex = resultPtr.toDartString();
     
-    _freeString(resultPtr);
     malloc.free(jsonPtr);
+    freeFunc(resultPtr);
     
-    return responseStr;
+    return signedHex;
   }
 }
