@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/blockbook_service.dart';
 import '../services/vault_crypto_service.dart';
 import '../services/secure_storage_service.dart';
+import '../services/profile_resolver_service.dart';
 
 class SendDialog extends StatefulWidget {
   const SendDialog({super.key});
@@ -15,79 +16,107 @@ class _SendDialogState extends State<SendDialog> {
   final _addressController = TextEditingController();
   final _amountController = TextEditingController();
   
-  bool _isProcessing = false;
-  String _statusMessage = "";
+  final _blockbook = BlockbookService();
+  final _vault = VaultCryptoService();
+  final _storage = SecureStorageService();
+  final _resolver = ProfileResolverService();
 
-  final BlockbookService _blockbook = BlockbookService();
-  final VaultCryptoService _vault = VaultCryptoService();
-  final SecureStorageService _storage = SecureStorageService();
+  bool _isProcessing = false;
+  bool _isResolving = false;
+  String _statusMessage = "";
+  
+  // Social Resolution State
+  String? _resolvedAddress;
+  String? _resolvedCid;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen to what the user types to trigger auto-resolution
+    _addressController.addListener(_onAddressChanged);
+  }
+
+  void _onAddressChanged() async {
+    final text = _addressController.text.trim();
+    if (text.startsWith('@') && text.length > 3) {
+      setState(() { _isResolving = true; _resolvedAddress = null; _resolvedCid = null; });
+      
+      final profile = await _resolver.resolveUsername(text);
+      
+      setState(() {
+        _isResolving = false;
+        if (profile != null) {
+          _resolvedAddress = profile["address"];
+          _resolvedCid = profile["cid"];
+        }
+      });
+    } else {
+      setState(() { _resolvedAddress = null; _resolvedCid = null; _isResolving = false; });
+    }
+  }
 
   Future<void> _processTransaction() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    final finalDestination = _resolvedAddress ?? _addressController.text.trim();
+    if (finalDestination.isEmpty) return;
 
     setState(() {
       _isProcessing = true;
-      _statusMessage = "Fetching network data...";
+      _statusMessage = "Securing network data...";
     });
 
     try {
-      final destination = _addressController.text.trim();
       final double amountRdd = double.parse(_amountController.text.trim());
-      final int amountSats = (amountRdd * 100000000).toInt(); // Convert to base units
-      final int estimatedFeeSats = 100000; // 0.001 RDD standard fee buffer
+      final int amountSats = (amountRdd * 100000000).toInt(); 
+      final int estimatedFeeSats = 100000;
 
-      // 1. Get our local address & mnemonic
       final mnemonic = await _storage.getMnemonic();
-      if (mnemonic == null) throw Exception("Wallet locked or missing.");
+      if (mnemonic == null) throw Exception("Wallet locked.");
       final myAddress = _vault.deriveReddcoinAddress(mnemonic);
 
-      // 2. Fetch UTXOs
-      setState(() => _statusMessage = "Gathering UTXOs...");
       final utxos = await _blockbook.getUtxos(myAddress);
-      
       if (utxos.isEmpty) throw Exception("No unspent coins available.");
 
-      // 3. UTXO Coin Selection Algorithm (Simple Largest-First for Alpha)
-      // Sort largest to smallest to minimize input count
-      utxos.sort((a, b) => int.parse(b['value']).compareTo(int.parse(a['value'])));
+      utxos.sort((a, b) => int.parse(b['value'].toString()).compareTo(int.parse(a['value'].toString())));
       
       List<dynamic> selectedUtxos = [];
       int gatheredSats = 0;
-      
       for (var utxo in utxos) {
         selectedUtxos.add(utxo);
-        gatheredSats += int.parse(utxo['value']);
+        gatheredSats += int.parse(utxo['value'].toString());
         if (gatheredSats >= (amountSats + estimatedFeeSats)) break;
       }
 
       if (gatheredSats < (amountSats + estimatedFeeSats)) {
-        throw Exception("Insufficient funds. You need ${(amountSats + estimatedFeeSats) / 100000000} RDD.");
+        throw Exception("Insufficient funds.");
       }
 
-      // 4. Send to Rust Core for Construction & Signing
-      setState(() => _statusMessage = "Signing transaction securely...");
-      
-      // Note: Rust currently returns a mock string until we build the serializer.
+      setState(() => _statusMessage = "Forging signatures offline...");
       final signedHex = _vault.signMultiInputTransaction(
-        privateKeyHex: "derivation_pending_in_rust", 
+        privateKeyHex: mnemonic, 
         utxos: selectedUtxos,
-        destination: destination,
+        destination: finalDestination,
         amount: amountRdd,
         changeAddress: myAddress,
       );
 
-      // 5. Success UI
+      if (signedHex.startsWith("Error")) throw Exception(signedHex);
+
+      setState(() => _statusMessage = "Broadcasting to miners...");
+      final txid = await _blockbook.broadcastTransaction(signedHex);
+
       setState(() {
-        _statusMessage = "Success! Hex generated:\n${signedHex.substring(0, 15)}...";
+        _statusMessage = "Success! TXID:\n${txid.substring(0, 16)}...";
         _isProcessing = false;
       });
 
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 4));
       if (mounted) Navigator.pop(context);
 
     } catch (e) {
       setState(() {
-        _statusMessage = "Error: ${e.toString()}";
+        _statusMessage = "Error: ${e.toString().replaceAll('Exception: ', '')}";
         _isProcessing = false;
       });
     }
@@ -113,18 +142,52 @@ class _SendDialogState extends State<SendDialog> {
             const Text("Send RDD", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 20),
             
+            // Social Resolution Indicator
+            if (_isResolving)
+               const Padding(padding: EdgeInsets.only(bottom: 10), child: Text("Resolving ReddID...", style: TextStyle(color: Colors.amber))),
+            if (_resolvedAddress != null)
+               Padding(
+                 padding: const EdgeInsets.only(bottom: 15),
+                 child: Row(
+                   children: [
+                     CircleAvatar(
+                       radius: 20,
+                       backgroundColor: Colors.white10,
+                       backgroundImage: _resolvedCid != null && _resolvedCid!.isNotEmpty 
+                          ? NetworkImage("https://gateway.pinata.cloud/ipfs/$_resolvedCid") 
+                          : null,
+                       child: _resolvedCid == null ? const Icon(Icons.check_circle, color: Colors.green) : null,
+                     ),
+                     const SizedBox(width: 10),
+                     Expanded(
+                       child: Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
+                           const Text("Verified Identity Found", style: TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                           Text(_resolvedAddress!.substring(0, 16) + "...", style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                         ],
+                       )
+                     )
+                   ],
+                 ),
+               ),
+
             TextFormField(
               controller: _addressController,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                labelText: "Recipient Address or ReddID",
+                labelText: "Recipient Address or @username",
                 labelStyle: const TextStyle(color: Colors.grey),
                 prefixIcon: const Icon(Icons.send_to_mobile, color: Color(0xFFE31B23)),
                 filled: true,
                 fillColor: Colors.black26,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
               ),
-              validator: (val) => val == null || val.isEmpty ? "Required" : null,
+              validator: (val) {
+                 if (val == null || val.isEmpty) return "Required";
+                 if (val.startsWith('@') && _resolvedAddress == null && !_isResolving) return "Identity not found on blockchain.";
+                 return null;
+              },
             ),
             const SizedBox(height: 15),
             
@@ -151,7 +214,13 @@ class _SendDialogState extends State<SendDialog> {
             if (_statusMessage.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 15.0),
-                child: Text(_statusMessage, style: TextStyle(color: _statusMessage.contains("Error") ? Colors.redAccent : Colors.greenAccent)),
+                child: Text(
+                  _statusMessage, 
+                  style: TextStyle(
+                    color: _statusMessage.contains("Error") ? Colors.redAccent : Colors.greenAccent,
+                    fontSize: 14,
+                  )
+                ),
               ),
 
             SizedBox(
@@ -165,7 +234,7 @@ class _SendDialogState extends State<SendDialog> {
                 onPressed: _isProcessing ? null : _processTransaction,
                 child: _isProcessing 
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("PREPARE TRANSACTION", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  : const Text("SEND REDDCOIN", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
             const SizedBox(height: 30),

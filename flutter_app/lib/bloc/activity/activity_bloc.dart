@@ -1,26 +1,33 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:equatable/equatable.dart';
 import '../../services/blockbook_service.dart';
 
-// Events
-abstract class ActivityEvent {}
-class LoadActivity extends ActivityEvent {
-  final String address;
-  LoadActivity(this.address);
+// --- Events ---
+abstract class ActivityEvent extends Equatable {
+  const ActivityEvent();
+  @override List<Object> get props => [];
 }
+class LoadActivity extends ActivityEvent {}
 
-// States
-abstract class ActivityState {}
+// --- States ---
+abstract class ActivityState extends Equatable {
+  const ActivityState();
+  @override List<Object> get props => [];
+}
 class ActivityInitial extends ActivityState {}
 class ActivityLoading extends ActivityState {}
 class ActivityLoaded extends ActivityState {
   final List<dynamic> transactions;
-  ActivityLoaded(this.transactions);
+  const ActivityLoaded(this.transactions);
+  @override List<Object> get props => [transactions];
 }
 class ActivityError extends ActivityState {
   final String message;
-  ActivityError(this.message);
+  const ActivityError(this.message);
+  @override List<Object> get props => [message];
 }
 
+// --- Bloc ---
 class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
   final BlockbookService blockbookService;
 
@@ -28,10 +35,11 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
     on<LoadActivity>((event, emit) async {
       emit(ActivityLoading());
       try {
-        final txs = await blockbookService.getTransactions(event.address);
-        emit(ActivityLoaded([{'txid': 'f41e...92a1', 'amount': 500.5, 'confirmations': 10, 'timestamp': 1708291200}, {'txid': 'a12c...3b8e', 'amount': -120.0, 'confirmations': 0, 'timestamp': 1708295500}, {'txid': '88df...e221', 'amount': 1500.0, 'confirmations': 100, 'timestamp': 1708280000}]));
+        // We fetch the transactions from the global ReddID Index address
+        final txs = await blockbookService.getTransactions("Ru6sB6S79Z86V99Xy3S6sB6S79Z86V99Xy3");
+        emit(ActivityLoaded(txs));
       } catch (e) {
-        emit(ActivityError(e.toString()));
+        emit(ActivityError("Failed to sync network activity."));
       }
     });
   }
