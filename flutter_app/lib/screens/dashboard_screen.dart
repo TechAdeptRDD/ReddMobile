@@ -1,54 +1,34 @@
 import 'package:flutter/material.dart';
-import '../widgets/activity_feed.dart';
-import '../widgets/send_dialog.dart';
+import 'wallet_tab.dart';
+import 'reddid_tab.dart';
+import 'settings_tab.dart';
 
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+class MainShell extends StatefulWidget {
+  const MainShell({super.key});
+
+  @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  int _currentIndex = 0;
+  final List<Widget> _tabs = const [WalletTab(), ReddIDTab(), SettingsTab()];
 
   @override
   Widget build(BuildContext context) {
-    const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: 'dev');
-
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F0F),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Image.asset('assets/branding/redd_logo_dark.png', height: 24),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.send, color: Color(0xFFE31B23)), 
-            onPressed: () { 
-              showModalBottomSheet(
-                context: context, 
-                isScrollControlled: true, 
-                backgroundColor: Colors.transparent, 
-                builder: (context) => const SendDialog()
-              ); 
-            }
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // ReddID Search Bar
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: "Search ReddID (e.g. techadept)",
-                prefixIcon: const Icon(Icons.search, color: Color(0xFFE31B23)),
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.05),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
-                hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-              onSubmitted: (value) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Searching for handle: $value...")));
-              },
-            ),
-          ),
-          const Expanded(child: ActivityFeed()),
+      body: _tabs[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        backgroundColor: const Color(0xFF151515),
+        selectedItemColor: const Color(0xFFE31B23),
+        unselectedItemColor: Colors.white54,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
+          BottomNavigationBarItem(icon: Icon(Icons.alternate_email), label: 'ReddID'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
     );

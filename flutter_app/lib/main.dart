@@ -48,7 +48,7 @@ class ReddMobileApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const VaultScreen(),
-        '/dashboard': (context) => const DashboardScreen(),
+        '/dashboard': (context) => const MainShell(),
       },
     );
   }
