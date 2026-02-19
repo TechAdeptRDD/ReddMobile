@@ -14,16 +14,10 @@ class DashboardScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("REDDMOBILE", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2, fontSize: 18)),
-            Text(appVersion, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 10)),
-          ],
-        ),
+        title: Image.asset('assets/branding/redd_logo_dark.png', height: 24),
         actions: [
           IconButton(
-            icon: const Icon(Icons.send), 
+            icon: const Icon(Icons.send, color: Color(0xFFE31B23)), 
             onPressed: () { 
               showModalBottomSheet(
                 context: context, 
@@ -35,7 +29,28 @@ class DashboardScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: const ActivityFeed(),
+      body: Column(
+        children: [
+          // ReddID Search Bar
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: "Search ReddID (e.g. techadept)",
+                prefixIcon: const Icon(Icons.search, color: Color(0xFFE31B23)),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.05),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+              onSubmitted: (value) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Searching for handle: $value...")));
+              },
+            ),
+          ),
+          const Expanded(child: ActivityFeed()),
+        ],
+      ),
     );
   }
 }
