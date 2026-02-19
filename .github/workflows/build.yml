@@ -29,13 +29,16 @@ jobs:
       - name: Install cargo-ndk
         run: cargo install cargo-ndk
 
-      - name: Clean and Prepare Flutter
+      # THE KILL SHOT: We delete whatever broken Android folder Git provided 
+      # and force the CI runner to generate a pristine V2 shell locally.
+      - name: Generate Pristine Android Shell
         run: |
           cd flutter_app
-          flutter clean
+          rm -rf android
+          flutter create --platforms android --org com.redd.mobile .
           flutter pub get
 
-      - name: Build Rust Core
+      - name: Build Rust Core & Inject JNI
         run: |
           cd rust_core
           cargo ndk -t arm64-v8a -t x86_64 -o ../flutter_app/android/app/src/main/jniLibs build --release
@@ -43,7 +46,6 @@ jobs:
       - name: Build Flutter APK
         run: |
           cd flutter_app
-          # Using --no-pub to use the packages we just got
           flutter build apk --release --no-pub
 
       - name: Rename APK for Release
