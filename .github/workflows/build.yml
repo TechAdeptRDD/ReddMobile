@@ -32,12 +32,28 @@ jobs:
       - name: Install cargo-ndk
         run: cargo install cargo-ndk
 
-      - name: Generate Pristine Android Shell
+      - name: Generate Pristine Android Shell & Inject OS Intents
         run: |
           cd flutter_app
           rm -rf android
           flutter create --platforms android --org com.redd.mobile .
           flutter pub get
+          
+          # Inject Deep Link Intent Filter safely via Python
+          python3 -c "
+          import re
+          with open('android/app/src/main/AndroidManifest.xml', 'r') as f: data = f.read()
+          intent_filter = '''
+                <intent-filter>
+                    <action android:name=\"android.intent.action.VIEW\" />
+                    <category android:name=\"android.intent.category.DEFAULT\" />
+                    <category android:name=\"android.intent.category.BROWSABLE\" />
+                    <data android:scheme=\"redd\" android:host=\"pay\" />
+                </intent-filter>
+          '''
+          data = data.replace('</activity>', intent_filter + '</activity>')
+          with open('android/app/src/main/AndroidManifest.xml', 'w') as f: f.write(data)
+          "
 
       - name: Fix Kotlin Duplicate Class Conflict
         run: |
@@ -73,7 +89,6 @@ jobs:
           echo "### 🚀 Release ${GITHUB_REF_NAME}" > release_notes.md
           echo "" >> release_notes.md
           echo "**Updates & Fixes:**" >> release_notes.md
-          # Grabs the commit message and converts it into a clean list, ignoring blank lines
           git log -1 --pretty=%B | grep -v "^$" | while read line; do echo "* $line" >> release_notes.md; done
           
       - name: Publish Official GitHub Release
