@@ -1,22 +1,25 @@
-# ReddMobile: The Next-Gen Social Wallet 📱🚀
+# 🔴 ReddMobile: The Decentralized Social Wallet
 
-ReddMobile is a high-performance, security-first wallet designed specifically for the **Reddcoin (RDD)** ecosystem. By combining the agility of **Flutter** with the memory safety of **Rust**, we have created a "Hybrid Engine" capable of handling complex blockchain operations with native speed.
+ReddMobile is a next-generation, non-custodial cryptocurrency wallet built for the Reddcoin (RDD) network. It goes beyond simple value transfer by integrating **ReddID**, a decentralized identity protocol that links human-readable `@usernames` and IPFS avatars directly to the blockchain.
 
-## 🧬 The Core Philosophy
-Traditional mobile wallets often struggle with speed or security tradeoffs. ReddMobile solves this via:
-* **The Vault (Rust):** All private keys, ECDSA signing (secp256k1), and sensitive data management occur in a compiled Rust binary.
-* **The Experience (Flutter):** A modern, reactive UI that provides instant feedback and "Glassmorphism" aesthetics.
-* **The Bridge (FFI):** A low-latency interface that allows Dart to call Rust functions directly without the overhead of a standard API.
-
-## 🗺️ Feature Roadmap
-- [x] **v0.1.0:** Core Signer & Activity Feed UI.
-- [x] **v0.1.3:** CI/CD "Release Factory" & Navigation Logic.
-- [ ] **v0.2.0:** BIP39 Mnemonic Seed Phrases (Rust-native).
-- [ ] **v0.3.0:** Biometric (FaceID/Fingerprint) Vault Unlock.
-- [ ] **v1.0.0:** Mainnet Release & ReddID Marketplace.
+## ✨ Core Features
+* **True Non-Custodial Security:** Private keys never leave the device. Seed phrases are stored in encrypted hardware enclaves via `flutter_secure_storage`.
+* **Rust Cryptographic Engine:** ECDSA signatures, BIP32/BIP39/BIP44 derivation, and raw transaction serialization are handled entirely offline by a highly optimized, memory-safe Rust core via FFI.
+* **ReddID Ecosystem:** Claim a unique `@handle`, upload an avatar to IPFS, and permanently anchor your identity to the blockchain using custom `OP_RETURN` payloads.
+* **Social Resolution:** Send funds to `@usernames` instead of long cryptographic addresses. The wallet automatically queries the decentralized index to verify the recipient's identity and IPFS avatar.
+* **Web3 Activity Feed:** Watch a real-time, global feed of users claiming identities and tipping each other on the network.
 
 ## 🛠️ Tech Stack
-* **Frontend:** Flutter 3.x (BLoC Pattern)
-* **Security Core:** Rust 2021 Edition
-* **API:** Blockbook (Reddcoin Implementation)
-* **CI/CD:** GitHub Actions (Automated Android Builds)
+* **Frontend:** Flutter (Dart) & BLoC State Management
+* **Cryptography:** Rust (compiled to Android `jniLibs` via `cargo-ndk`)
+* **Decentralized Storage:** IPFS (InterPlanetary File System)
+* **Blockchain Indexing:** Blockbook API
+
+## 🚀 Getting Started
+1. Clone the repository.
+2. Ensure you have the Flutter SDK (3.19.0+) and Rust Toolchain installed.
+3. Run `cargo ndk` in the `rust_core` directory to build the cryptographic engine.
+4. Run `flutter run` in the `flutter_app` directory.
+
+---
+*Built for the future of decentralized social tipping.*
