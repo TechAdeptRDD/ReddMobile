@@ -1,107 +1,69 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/activity/activity_bloc.dart';
 
 class ActivityFeed extends StatelessWidget {
-  const ActivityFeed({super.key});
+  final List<dynamic> transactions;
+  final String currentAddress;
+
+  const ActivityFeed({super.key, required this.transactions, required this.currentAddress});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-          child: Text(
-            "RECENT ACTIVITY",
-            style: TextStyle(
-              color: Colors.white70,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
+    if (transactions.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.history, size: 60, color: Colors.white.withOpacity(0.1)),
+            const SizedBox(height: 16),
+            const Text("No recent activity", style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: transactions.length,
+      itemBuilder: (context, index) {
+        final tx = transactions[index];
+        
+        // Basic Blockbook parsing logic
+        // If the 'vin' contains our address, we sent it. Otherwise, we received it.
+        bool isSender = false;
+        if (tx['vin'] != null) {
+          for (var input in tx['vin']) {
+            if (input['addresses'] != null && input['addresses'].contains(currentAddress)) {
+              isSender = true;
+              break;
+            }
+          }
+        }
+
+        final String txid = tx['txid'] ?? "Unknown";
+        final String shortTxid = txid.length > 10 ? "${txid.substring(0, 5)}...${txid.substring(txid.length - 5)}" : txid;
+        
+        // Value is in base units (Satoshis/Reddoshis), divide by 10^8
+        final double value = (double.tryParse(tx['value'] ?? '0') ?? 0) / 100000000;
+
+        return ListTile(
+          leading: CircleAvatar(
+            backgroundColor: isSender ? Colors.white.withOpacity(0.1) : const Color(0xFFE31B23).withOpacity(0.2),
+            child: Icon(
+              isSender ? Icons.arrow_upward : Icons.arrow_downward,
+              color: isSender ? Colors.white70 : const Color(0xFFE31B23),
             ),
           ),
-        ),
-        Expanded(
-          child: BlocBuilder<ActivityBloc, ActivityState>(
-            builder: (context, state) {
-              if (state is ActivityLoading) {
-                return const Center(child: CircularProgressIndicator(color: Color(0xFFE31B23)));
-              }
-              if (state is ActivityLoaded) {
-                if (state.transactions.isEmpty) {
-                  return const Center(
-                    child: Text("No transactions yet.", style: TextStyle(color: Colors.grey)),
-                  );
-                }
-                return ListView.builder(
-                  itemCount: state.transactions.length,
-                  itemBuilder: (context, index) {
-                    final tx = state.transactions[index];
-                    final bool isIncoming = (tx['amount'] as num) > 0;
-                    
-                    return Container(
-                      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withOpacity(0.05)),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: isIncoming 
-                                ? Colors.green.withOpacity(0.1) 
-                                : Colors.red.withOpacity(0.1),
-                            child: Icon(
-                              isIncoming ? Icons.south_west : Icons.north_east,
-                              color: isIncoming ? Colors.greenAccent : Colors.redAccent,
-                              size: 18,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  tx['txid'].toString().substring(0, 12) + "...",
-                                  style: const TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  tx['confirmations'] > 0 ? "Confirmed" : "Pending",
-                                  style: TextStyle(
-                                    color: tx['confirmations'] > 0 ? Colors.grey : Colors.orangeAccent,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            "${isIncoming ? '+' : ''}${tx['amount']} RDD",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: isIncoming ? Colors.greenAccent : Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              }
-              return const Center(child: Text("Start an activity to see history."));
-            },
+          title: Text(isSender ? "Sent RDD" : "Received RDD", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          subtitle: Text("TXID: $shortTxid", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          trailing: Text(
+            "${isSender ? '-' : '+'}${value.toStringAsFixed(2)}",
+            style: TextStyle(
+              color: isSender ? Colors.white70 : Colors.greenAccent,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
