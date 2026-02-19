@@ -26,23 +26,25 @@ jobs:
       - name: Install Rust target
         run: rustup target add aarch64-linux-android x86_64-linux-android
           
-      # NEW: Install the dedicated Android cross-compilation tool
       - name: Install cargo-ndk
         run: cargo install cargo-ndk
+
+      - name: Clean and Prepare Flutter
+        run: |
+          cd flutter_app
+          flutter clean
+          flutter pub get
 
       - name: Build Rust Core
         run: |
           cd rust_core
-          cargo clean
-          # cargo-ndk automatically uses the correct Android linkers 
-          # and routes the output safely into Flutter's jniLibs folder.
           cargo ndk -t arm64-v8a -t x86_64 -o ../flutter_app/android/app/src/main/jniLibs build --release
 
       - name: Build Flutter APK
         run: |
           cd flutter_app
-          flutter pub get
-          flutter build apk --release
+          # Using --no-pub to use the packages we just got
+          flutter build apk --release --no-pub
 
       - name: Rename APK for Release
         run: |
