@@ -29,8 +29,6 @@ jobs:
       - name: Install cargo-ndk
         run: cargo install cargo-ndk
 
-      # THE KILL SHOT: We delete whatever broken Android folder Git provided 
-      # and force the CI runner to generate a pristine V2 shell locally.
       - name: Generate Pristine Android Shell
         run: |
           cd flutter_app
@@ -46,6 +44,7 @@ jobs:
       - name: Build Flutter APK
         run: |
           cd flutter_app
+          # The missing dependencies are now safely downloaded by standard pub get
           flutter build apk --release
 
       - name: Rename APK for Release
