@@ -6,7 +6,7 @@ on:
       - 'v*.*.*'
 
 permissions:
-  contents: write # Required to publish GitHub Releases
+  contents: write
 
 jobs:
   build:
@@ -73,12 +73,8 @@ jobs:
           echo "### 🚀 Release ${GITHUB_REF_NAME}" > release_notes.md
           echo "" >> release_notes.md
           echo "**Updates & Fixes:**" >> release_notes.md
-          # Convert the commit message into a bulleted list dynamically
-          git log -1 --pretty=%B | while read line; do
-            if [ ! -z "$line" ]; then
-              echo "* $line" >> release_notes.md
-            fi
-          done
+          # Grabs the commit message and converts it into a clean list, ignoring blank lines
+          git log -1 --pretty=%B | grep -v "^$" | while read line; do echo "* $line" >> release_notes.md; done
           
       - name: Publish Official GitHub Release
         uses: softprops/action-gh-release@v2
@@ -86,5 +82,3 @@ jobs:
           name: ReddMobile ${{ github.ref_name }}
           body_path: release_notes.md
           files: flutter_app/build/app/outputs/flutter-apk/ReddMobile-*.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
