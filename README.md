@@ -1,60 +1,22 @@
-# ReddMobile 📱💰
+# ReddMobile: The Next-Gen Social Wallet 📱🚀
 
-ReddMobile is a production-grade, high-security mobile wallet for the **Reddcoin (RDD)** network. It combines the sleek, cross-platform UI of **Flutter** with a rock-solid, native **Rust** cryptographic core.
+ReddMobile is a high-performance, security-first wallet designed specifically for the **Reddcoin (RDD)** ecosystem. By combining the agility of **Flutter** with the memory safety of **Rust**, we have created a "Hybrid Engine" capable of handling complex blockchain operations with native speed.
 
-## 🚀 Features
+## 🧬 The Core Philosophy
+Traditional mobile wallets often struggle with speed or security tradeoffs. ReddMobile solves this via:
+* **The Vault (Rust):** All private keys, ECDSA signing (secp256k1), and sensitive data management occur in a compiled Rust binary.
+* **The Experience (Flutter):** A modern, reactive UI that provides instant feedback and "Glassmorphism" aesthetics.
+* **The Bridge (FFI):** A low-latency interface that allows Dart to call Rust functions directly without the overhead of a standard API.
 
-* **ReddID Native Support:** Search, check availability, and bid on ReddID handles directly from the dashboard.
-* **Hybrid Architecture:** All sensitive cryptographic operations and transaction signing happen in a native Rust "Vault" via FFI.
-* **Multi-Input Logic:** Sophisticated coin selection and UTXO management to handle fragmented balances and automatic change calculation.
-* **Real-time Activity:** Live-synced transaction history powered by Blockbook API integration.
-* **Glassmorphism UI:** A premium, modern Obsidian-themed interface designed for the next generation of social currency users.
-
-## 🏗️ Architecture
-
-ReddMobile utilizes a **Sign-and-Broadcast** pipeline:
-
-1.  **State Management:** Flutter BLoC handles the application logic and UI states.
-2.  **Security Engine:** A custom Rust library (\`rust_core\`) manages private keys and signs transactions using the \`bitcoin\` and \`secp256k1\` crates.
-3.  **Data Layer:** Integration with Blockbook for UTXO fetching, address history, and transaction broadcasting.
-
-
+## 🗺️ Feature Roadmap
+- [x] **v0.1.0:** Core Signer & Activity Feed UI.
+- [x] **v0.1.3:** CI/CD "Release Factory" & Navigation Logic.
+- [ ] **v0.2.0:** BIP39 Mnemonic Seed Phrases (Rust-native).
+- [ ] **v0.3.0:** Biometric (FaceID/Fingerprint) Vault Unlock.
+- [ ] **v1.0.0:** Mainnet Release & ReddID Marketplace.
 
 ## 🛠️ Tech Stack
-
-* **Frontend:** [Flutter](https://flutter.dev) (Dart)
-* **Core:** [Rust](https://www.rust-lang.org) (ECDSA Signing, Transaction Building)
-* **Bridge:** Dart FFI (Foreign Function Interface)
-* **Backend:** Blockbook API (Reddcoin implementation)
-
-## 📂 Project Structure
-
-* \`/flutter_app\`: The mobile application code.
-* \`/rust_core\`: The native Rust library for cryptographic operations.
-* \`/docs\`: Detailed User and Developer documentation.
-
-## 🛠️ Development
-
-### Prerequisites
-* Flutter SDK
-* Rust (Cargo)
-* Android NDK / LLVM (for FFI compilation)
-
-### Build the Rust Core
-\`\`\`bash
-cd rust_core
-cargo build --release
-\`\`\`
-
-### Run the App
-\`\`\`bash
-cd flutter_app
-flutter run
-\`\`\`
-
-## 📜 Documentation
-* [User Guide](./docs/USER_GUIDE.md)
-* [Developer Manual](./docs/DEVELOPER_MANUAL.md)
-
----
-**Maintained by TechAdeptRDD** *Building the future of social currency, one block at a time.*
+* **Frontend:** Flutter 3.x (BLoC Pattern)
+* **Security Core:** Rust 2021 Edition
+* **API:** Blockbook (Reddcoin Implementation)
+* **CI/CD:** GitHub Actions (Automated Android Builds)

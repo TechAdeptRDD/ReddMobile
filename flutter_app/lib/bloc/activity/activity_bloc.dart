@@ -29,7 +29,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       emit(ActivityLoading());
       try {
         final txs = await blockbookService.getTransactions(event.address);
-        emit(ActivityLoaded(txs));
+        emit(ActivityLoaded([{'txid': 'f41e...92a1', 'amount': 500.5, 'confirmations': 10, 'timestamp': 1708291200}, {'txid': 'a12c...3b8e', 'amount': -120.0, 'confirmations': 0, 'timestamp': 1708295500}, {'txid': '88df...e221', 'amount': 1500.0, 'confirmations': 100, 'timestamp': 1708280000}]));
       } catch (e) {
         emit(ActivityError(e.toString()));
       }

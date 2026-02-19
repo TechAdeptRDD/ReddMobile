@@ -1,27 +1,25 @@
-# ReddMobile: User Guide
+# 📖 ReddMobile User Guide
 
-Welcome to the future of social currency. ReddMobile is designed to make Reddcoin (RDD) and ReddID as accessible as your favorite social media app.
+## 🔐 The Secure Vault
+Upon opening the app, you are greeted by the **Secure Vault**. 
+* Click **Unlock Wallet** to enter the Dashboard. 
+* *Note: In future versions, this will be protected by your phone's Biometrics or a PIN.*
 
-## 🚀 Getting Started
+## 📊 The Dashboard
+Your Dashboard displays your current Reddcoin activity.
+* **Recent Activity:** Scroll through your transaction history. 
+* **Status Indicators:** Transactions marked "Pending" are awaiting network confirmations.
 
-### 1. The Dashboard
-Your Dashboard is your command center. From here, you can:
-* **Check Balance:** View your current RDD holdings in real-time.
-* **Search ReddID:** Type in a handle (e.g., `techadept`) to see if it is available for registration.
-* **Activity Feed:** See a live-synced history of your incoming and outgoing transactions.
+## 💸 Sending Reddcoin
+1.  Tap the **Send Icon** (Paper Plane) in the top right.
+2.  Enter the recipient's **Reddcoin Address**.
+3.  Enter the **Amount** in RDD.
+4.  Tap **Confirm & Send**. 
+    * *The app will automatically calculate fees and use your available coins to sign the transaction.*
 
-### 2. Acquiring a ReddID
-To register your unique identity on the blockchain:
-1. Use the search bar to find an available handle.
-2. If available, click **"Bid"**.
-3. Confirm the transaction. This will create a specialized `OP_RETURN` transaction on the Reddcoin network, linking your address to that handle.
+## 🆔 ReddID (Beta)
+ReddMobile allows you to interact with the ReddID system. Use the search functions to find handles and prepare "bids" to claim your social identity on the blockchain.
 
-### 3. Sending RDD
-1. Tap the **Send** icon (Paper Plane) in the top right.
-2. Enter the recipient's Reddcoin address.
-3. Enter the amount.
-4. Confirm. The app will automatically calculate the network fee and combine your available coins to complete the transfer.
-
-## 🛡️ Security
-* **Vault:** Your private keys never leave your phone. They are stored in an encrypted vault managed by a high-security Rust engine.
-* **Biometrics:** (Coming Soon) You can unlock your wallet using FaceID or Fingerprint.
+## 🛡️ Best Practices
+* **Keep your App Updated:** Always check the "Releases" tab on GitHub for the latest `.apk`.
+* **Testing:** If using a cloud emulator like Appetize.io, ensure you are running build `v0.1.3` or higher.

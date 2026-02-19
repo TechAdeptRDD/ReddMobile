@@ -1,28 +1,29 @@
-# ReddMobile: Developer & Architecture Manual
+# 🛠️ ReddMobile Developer Manual (Technical Architecture)
 
-## 🏗️ The Hybrid Architecture
-ReddMobile uses a **High-Performance Bridge** architecture:
-1. **Frontend (Flutter/Dart):** Handles the UI, BLoC state management, and API calls to Blockbook.
-2. **Core (Rust):** Handles all cryptographic operations, transaction signing, and sensitive data management.
-3. **Bridge (FFI):** Uses Dart's `Foreign Function Interface` to pass data to Rust with near-zero latency.
+## 1. The FFI Bridge (Native Handshake)
+The app uses **Dart FFI** to communicate with `rust_core`. 
+* **Rust Entry:** `rust_core/src/lib.rs`
+* **Dart Bridge:** `lib/services/vault_crypto_service.dart`
 
-## 📁 Repository Structure
-* `/flutter_app`: The cross-platform mobile UI.
-* `/rust_core`: The backend signing engine (compiled to `.so` or `.a` files).
-* `/rust_core/src/transaction_signer.rs`: The heart of the wallet—handles P2PKH and OP_RETURN logic.
+**Data Flow:**
+1. Dart encodes data (e.g., UTXOs) to JSON strings.
+2. Dart converts strings to `Pointer<Utf8>`.
+3. Rust receives the pointer, performs crypto operations, and returns a new pointer to a hex-encoded transaction.
+4. Dart reads the string and cleans up memory using `malloc.free()`.
 
-## 🛠️ Development Workflow
+## 2. BLoC State Management
+We utilize the **BLoC (Business Logic Component)** pattern to separate UI from logic.
+* **DashboardBloc:** Manages balance and transaction broadcasting.
+* **ActivityBloc:** Manages the transaction history state.
+* **Navigation:** Blocs are provided globally in `main.dart` to prevent `ProviderNotFoundException` during screen transitions.
 
-### Adding New Rust Capabilities
-1. Modify logic in `rust_core/src/transaction_signer.rs`.
-2. Expose the function via FFI in `rust_core/src/lib.rs` using `#[no_mangle] extern "C"`.
-3. Rebuild the library: `cargo build --release`.
-4. Update `lib/services/vault_crypto_service.dart` to link the new function.
+## 3. The CI/CD Pipeline (Release Factory)
+The project uses GitHub Actions (`.github/workflows/android_build.yml`) to:
+1.  **Cross-Compile Rust:** Uses `cargo-ndk` to build for `arm64-v8a`.
+2.  **Bundle Assets:** Copies `.so` files into `android/app/src/main/jniLibs`.
+3.  **Build Flutter:** Compiles the APK with `--dart-define` versioning.
+4.  **Auto-Release:** Creates a GitHub Release upon a version tag (e.g., `v0.1.3`).
 
-### Running Tests
-* **Dart Tests:** `flutter test`
-* **Rust Tests:** `cargo test` (run within `/rust_core`)
-
-## 📋 Technical Debt & Roadmap
-* **Base58 Validation:** Currently uses `assume_checked()` to bypass Reddcoin's unique version byte (0x3D). This needs a formal network constant implementation in the Rust `bitcoin` crate.
-* **Mnemonic Logic:** BIP39 seed phrase generation needs to be moved from Mock to Rust production logic.
+## 4. Troubleshooting Build Errors
+* **"Missing Clang":** Ensure `ANDROID_NDK_HOME` is set in the build environment.
+* **"ProviderNotFound":** Always check that the Bloc is provided in `main.dart` above the `MaterialApp`.
