@@ -13,27 +13,57 @@ class SecureStorageService {
     return await _storage.read(key: 'wallet_mnemonic');
   }
 
-  // --- Address Book / Contacts ---
-  Future<void> saveContacts(List<String> contacts) async {
-    await _storage.write(key: 'saved_contacts', value: jsonEncode(contacts));
+  // --- Avatar-Rich Address Book ---
+  Future<void> saveContacts(List<Map<String, String>> contacts) async {
+    await _storage.write(key: 'saved_contacts_v2', value: jsonEncode(contacts));
   }
 
-  Future<List<String>> getContacts() async {
-    final data = await _storage.read(key: 'saved_contacts');
-    if (data == null) return [];
+  Future<List<Map<String, String>>> getContacts() async {
+    final data = await _storage.read(key: 'saved_contacts_v2');
+    if (data == null) {
+      // Migration fallback from v1 text-only contacts
+      final oldData = await _storage.read(key: 'saved_contacts');
+      if (oldData != null) {
+         try {
+           final List<String> oldList = List<String>.from(jsonDecode(oldData));
+           final migrated = oldList.map((handle) => {"handle": handle, "cid": ""}).toList();
+           await saveContacts(migrated);
+           await _storage.delete(key: 'saved_contacts'); // Clean up old key
+           return migrated;
+         } catch (_) { return []; }
+      }
+      return [];
+    }
+    
     try {
-      return List<String>.from(jsonDecode(data));
+      final List<dynamic> decoded = jsonDecode(data);
+      return decoded.map((e) => Map<String, String>.from(e)).toList();
     } catch (e) {
       return [];
     }
   }
 
-  Future<void> addContact(String handle) async {
+  Future<void> addContact(String handle, {String cid = ""}) async {
     final contacts = await getContacts();
     final cleanHandle = handle.toLowerCase().replaceAll('@', '').trim();
-    if (!contacts.contains(cleanHandle)) {
-      contacts.add(cleanHandle);
+    
+    // Check if user already exists
+    int index = contacts.indexWhere((c) => c['handle'] == cleanHandle);
+    if (index != -1) {
+      // Update CID if they added an avatar later
+      if (cid.isNotEmpty && contacts[index]['cid'] != cid) {
+        contacts[index]['cid'] = cid;
+        await saveContacts(contacts);
+      }
+    } else {
+      contacts.add({"handle": cleanHandle, "cid": cid});
       await saveContacts(contacts);
     }
+  }
+
+  Future<void> removeContact(String handle) async {
+    final contacts = await getContacts();
+    contacts.removeWhere((c) => c['handle'] == handle);
+    await saveContacts(contacts);
   }
 }

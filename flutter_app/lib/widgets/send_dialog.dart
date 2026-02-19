@@ -34,7 +34,7 @@ class _SendDialogState extends State<SendDialog> {
   String _txid = "";
   String? _resolvedAddress;
   String? _resolvedCid;
-  List<String> _contacts = [];
+  List<Map<String, String>> _contacts = [];
 
   @override
   void initState() {
@@ -133,7 +133,7 @@ class _SendDialogState extends State<SendDialog> {
       final txid = await _blockbook.broadcastTransaction(signedHex);
 
       if (_addressController.text.startsWith('@')) {
-         await _storage.addContact(_addressController.text);
+         await _storage.addContact(_addressController.text, cid: _resolvedCid ?? "");
       }
 
       setState(() {
@@ -183,6 +183,15 @@ class _SendDialogState extends State<SendDialog> {
                           child: ActionChip(
                             backgroundColor: Colors.black26,
                             side: const BorderSide(color: Color(0xFFE31B23), width: 1),
+                            avatar: _contacts[index]["cid"] != "" 
+                                ? CircleAvatar(backgroundImage: NetworkImage("https://gateway.pinata.cloud/ipfs/${_contacts[index]["cid"]}"))
+                                : const CircleAvatar(backgroundColor: Colors.white10, child: Icon(Icons.person, size: 12, color: Colors.white)),
+                            label: Text("@${_contacts[index]["handle"]}", style: const TextStyle(color: Colors.white)),
+                            onPressed: () {
+                              _addressController.text = "@${_contacts[index]["handle"]}";
+                              _onAddressChanged();
+                            },
+                          ),
                             label: Text("@${_contacts[index]}", style: const TextStyle(color: Colors.white)),
                             onPressed: () {
                               _addressController.text = "@${_contacts[index]}";

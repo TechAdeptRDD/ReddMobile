@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class BlockbookService {
+  List<dynamic>? _cachedFeed;
+  DateTime? _lastFeedFetch;
+
   // The Redundant Node Array
   final List<String> _baseUrls = [
     'https://blockbook.reddcoin.com',
@@ -82,7 +85,33 @@ class BlockbookService {
     return 100000; // Safe Fallback
   }
 
-  Future<List<dynamic>> getRecentTransactions() async {
+  Future<List<dynamic>> getRecentTransactions({bool forceRefresh = false}) async {
+    // Serve from cache if within 30 seconds to protect node infrastructure
+    if (!forceRefresh && _cachedFeed != null && _lastFeedFetch != null) {
+      if (DateTime.now().difference(_lastFeedFetch!).inSeconds < 30) {
+        return _cachedFeed!;
+      }
+    }
+
+    final res = await _reliableGet("/api/v2/block/last");
+    final blockData = json.decode(res.body);
+    List<dynamic> txs = [];
+
+    if (blockData["txs"] == null || blockData["txs"].isEmpty) {
+        final prevBlockHash = blockData["previousBlockHash"];
+        if (prevBlockHash != null) {
+            final prevRes = await _reliableGet("/api/v2/block/$prevBlockHash");
+            final prevBlockData = json.decode(prevRes.body);
+            txs = prevBlockData["txs"] ?? [];
+        }
+    } else {
+        txs = blockData["txs"];
+    }
+
+    _cachedFeed = txs;
+    _lastFeedFetch = DateTime.now();
+    return txs;
+  }
     final res = await _reliableGet('/api/v2/block/last'); // Fetch latest block
     final blockData = json.decode(res.body);
     

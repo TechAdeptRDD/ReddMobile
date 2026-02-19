@@ -13,7 +13,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final SecureStorageService _storage = SecureStorageService();
   final LocalAuthentication _auth = LocalAuthentication();
   
-  List<String> _contacts = [];
+  List<Map<String, String>> _contacts = [];
   bool _isLoading = true;
 
   @override
@@ -31,6 +31,9 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _removeContact(String handle) async {
+    await _storage.removeContact(handle);
+    _loadData();
+  }
     _contacts.remove(handle);
     await _storage.saveContacts(_contacts);
     setState(() {});
@@ -128,11 +131,15 @@ class _SettingsPageState extends State<SettingsPage> {
                 margin: const EdgeInsets.only(bottom: 8),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                 child: ListTile(
-                  leading: const CircleAvatar(backgroundColor: Colors.black26, child: Icon(Icons.person, color: Colors.white54)),
-                  title: Text("@$contact", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.black26, 
+                    backgroundImage: contact["cid"] != "" ? NetworkImage("https://gateway.pinata.cloud/ipfs/${contact["cid"]}") : null,
+                    child: contact["cid"] == "" ? const Icon(Icons.person, color: Colors.white54) : null,
+                  ),
+                  title: Text("@${contact["handle"]}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                    onPressed: () => _removeContact(contact),
+                    onPressed: () => _removeContact(contact["handle"]!),
                   ),
                 ),
               )).toList(),
