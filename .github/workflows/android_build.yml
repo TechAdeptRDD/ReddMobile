@@ -1,0 +1,58 @@
+name: Android Build (Rust + Flutter)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. Setup Rust
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi, i686-linux-android
+
+      # 2. Setup NDK (Required for Rust -> Android)
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r25c
+
+      # 3. Build Rust Core (Release)
+      - name: Build Rust Libraries
+        run: |
+          cd rust_core
+          # Build for the most common Android architecture (ARM64)
+          cargo build --target aarch64-linux-android --release
+          
+          # Move binary to Flutter's jniLibs folder so it gets bundled
+          mkdir -p ../flutter_app/android/app/src/main/jniLibs/arm64-v8a
+          cp target/aarch64-linux-android/release/librust_core.so ../flutter_app/android/app/src/main/jniLibs/arm64-v8a/
+
+      # 4. Setup Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      # 5. Build Android APK
+      - name: Build APK
+        run: |
+          cd flutter_app
+          flutter pub get
+          # Building a debug-signed APK (perfect for testing/sharing)
+          flutter build apk --debug
+
+      # 6. Upload the Result
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: reddmobile-debug-apk
+          path: flutter_app/build/app/outputs/flutter-apk/app-debug.apk
