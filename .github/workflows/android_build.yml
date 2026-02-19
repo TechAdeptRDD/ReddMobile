@@ -3,7 +3,7 @@ name: Android Build (Rust + Flutter)
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # Allows manual triggering
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,41 +16,47 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android, armv7-linux-androideabi, i686-linux-android
+          targets: aarch64-linux-android
 
-      # 2. Setup NDK (Required for Rust -> Android)
+      # 2. Setup Android NDK
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
+        id: setup-ndk
         with:
           ndk-version: r25c
 
-      # 3. Build Rust Core (Release)
+      # 3. Install cargo-ndk (The Bridge)
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      # 4. Build Rust Core using cargo-ndk
       - name: Build Rust Libraries
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
           cd rust_core
-          # Build for the most common Android architecture (ARM64)
-          cargo build --target aarch64-linux-android --release
+          # cargo-ndk handles the CC and AR environment variables for us
+          cargo ndk -t arm64-v8a build --release
           
-          # Move binary to Flutter's jniLibs folder so it gets bundled
+          # Move binary to Flutter's jniLibs folder
           mkdir -p ../flutter_app/android/app/src/main/jniLibs/arm64-v8a
           cp target/aarch64-linux-android/release/librust_core.so ../flutter_app/android/app/src/main/jniLibs/arm64-v8a/
 
-      # 4. Setup Flutter
+      # 5. Setup Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
 
-      # 5. Build Android APK
+      # 6. Build Android APK
       - name: Build APK
         run: |
           cd flutter_app
           flutter pub get
-          # Building a debug-signed APK (perfect for testing/sharing)
           flutter build apk --debug
 
-      # 6. Upload the Result
+      # 7. Upload the Result
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
