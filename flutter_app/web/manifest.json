@@ -1,6 +1,6 @@
 {
-    "name": "redd_mobile",
-    "short_name": "redd_mobile",
+    "name": "flutter_app",
+    "short_name": "flutter_app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

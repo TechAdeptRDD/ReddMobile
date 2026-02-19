@@ -173,7 +173,7 @@ pub extern "C" fn build_and_sign_tx_ffi(json_request_ptr: *const std::os::raw::c
         if json_request_ptr.is_null() { return std::ptr::null_mut(); }
         let json_str = std::ffi::CStr::from_ptr(json_request_ptr).to_str().unwrap_or("");
         let request: TransactionRequest = match serde_json::from_str(json_str) {
-            Ok(req) => req, Err(e) => return CString::new(format!("JSON Error: {}", e)).unwrap().into_raw(),
+            Ok(req) => req, Err(e) => .format("Error: JSON Parse Fail"), e)).unwrap().into_raw(),
         };
 
         let mnemonic = match Mnemonic::parse(&request.mnemonic) { Ok(m) => m, Err(_) => return CString::new("Error: Invalid Mnemonic").unwrap().into_raw() };

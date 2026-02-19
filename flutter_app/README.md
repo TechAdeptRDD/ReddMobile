@@ -1,4 +1,4 @@
-# redd_mobile
+# flutter_app
 
 A new Flutter project.
 
