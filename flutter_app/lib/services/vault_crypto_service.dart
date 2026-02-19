@@ -38,7 +38,7 @@ class VaultCryptoService {
     return address;
   }
 
-  // Matches DashboardBloc call: vaultCryptoService.signMultiInputTransaction(...)
+  // Fully aligned with DashboardBloc parameters
   String signMultiInputTransaction({
     String privateKeyHex = "", 
     List<dynamic> utxos = const [],
@@ -46,7 +46,8 @@ class VaultCryptoService {
     double amount = 0.0,
     String changeAddress = "",
     double feePerKb = 1000.0,
+    String? opReturnData, // Restored this parameter
   }) {
-    return "mock_signed_tx_hex_v0.5.2"; 
+    return "mock_signed_tx_hex_v0.5.3"; 
   }
 }

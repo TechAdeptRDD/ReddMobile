@@ -43,7 +43,7 @@ class _SendDialogState extends State<SendDialog> {
 
       // 2. Fetch UTXOs
       setState(() => _statusMessage = "Gathering UTXOs...");
-      final utxos = await _blockbook.getUTXOs(myAddress);
+      final utxos = await _blockbook.getUtxos(myAddress);
       
       if (utxos.isEmpty) throw Exception("No unspent coins available.");
 
