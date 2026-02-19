@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../services/blockbook_service.dart';
@@ -5,26 +7,21 @@ import '../../services/secure_storage_service.dart';
 import '../../services/vault_crypto_service.dart';
 
 // --- Events ---
-abstract class DashboardEvent extends Equatable {
-  const DashboardEvent();
-  @override List<Object> get props => [];
-}
+abstract class DashboardEvent extends Equatable { const DashboardEvent(); @override List<Object> get props => []; }
 class LoadDashboardData extends DashboardEvent {}
 
 // --- States ---
-abstract class DashboardState extends Equatable {
-  const DashboardState();
-  @override List<Object> get props => [];
-}
+abstract class DashboardState extends Equatable { const DashboardState(); @override List<Object> get props => []; }
 class DashboardInitial extends DashboardState {}
 class DashboardLoading extends DashboardState {}
 class DashboardLoaded extends DashboardState {
   final String address;
   final String formattedBalance;
+  final String fiatValue;
   final List<dynamic> history;
   
-  const DashboardLoaded(this.address, this.formattedBalance, this.history);
-  @override List<Object> get props => [address, formattedBalance, history];
+  const DashboardLoaded(this.address, this.formattedBalance, this.fiatValue, this.history);
+  @override List<Object> get props => [address, formattedBalance, fiatValue, history];
 }
 class DashboardError extends DashboardState {
   final String message;
@@ -43,28 +40,29 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       emit(DashboardLoading());
       try {
         final mnemonic = await storage.getMnemonic();
-        if (mnemonic == null) {
-          emit(const DashboardError("Wallet not found. Please create or import one."));
-          return;
-        }
-
+        if (mnemonic == null) { emit(const DashboardError("Wallet not found.")); return; }
         final address = vault.deriveReddcoinAddress(mnemonic);
         
-        // Fetch Balance & History from Blockbook
         final data = await blockbook.getAddressDetails(address);
-        
-        // Calculate balance (Balance + Unconfirmed)
         final balanceSats = int.parse(data['balance'] ?? '0') + int.parse(data['unconfirmedBalance'] ?? '0');
         final balanceRdd = balanceSats / 100000000;
         
-        // Format balance with commas for readability (e.g., 1,000,000.00)
-        String formatted = balanceRdd.toStringAsFixed(2).replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), 
-          (Match m) => '${m[1]},'
-        );
+        String formatted = balanceRdd.toStringAsFixed(2).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
+
+        // Fetch Live Fiat Price (USD)
+        double priceUsd = 0.0;
+        try {
+          final res = await http.get(Uri.parse('https://api.coingecko.com/api/v3/simple/price?ids=reddcoin&vs_currencies=usd'));
+          if (res.statusCode == 200) {
+            priceUsd = (json.decode(res.body)['reddcoin']['usd'] as num).toDouble();
+          }
+        } catch (_) { /* Silently fail fiat fetch to keep core wallet functional */ }
+        
+        final double totalFiat = balanceRdd * priceUsd;
+        String formattedFiat = "\$${totalFiat.toStringAsFixed(2)} USD";
 
         final List<dynamic> txs = data['transactions'] ?? [];
-        emit(DashboardLoaded(address, formatted, txs));
+        emit(DashboardLoaded(address, formatted, formattedFiat, txs));
       } catch (e) {
         emit(DashboardError("Failed to sync wallet data."));
       }

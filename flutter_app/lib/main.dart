@@ -10,6 +10,7 @@ import 'services/blockbook_service.dart';
 import 'services/secure_storage_service.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/social_page.dart';
+import 'pages/settings_page.dart';
 import 'pages/activity_page.dart';
 import 'pages/welcome_page.dart';
 import 'widgets/send_dialog.dart';
@@ -69,6 +70,7 @@ class _MainNavigationState extends State<MainNavigation> {
     const SocialPage(),   
     const DashboardPage(),
     const ActivityPage(), 
+    const SettingsPage(),
   ];
 
   @override
@@ -116,6 +118,7 @@ class _MainNavigationState extends State<MainNavigation> {
           BottomNavigationBarItem(icon: Icon(Icons.person_search), label: "Identity"),
           BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Wallet"),
           BottomNavigationBarItem(icon: Icon(Icons.public), label: "Global"),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
         ],
       ),
     );

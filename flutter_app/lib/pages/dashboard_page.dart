@@ -92,6 +92,8 @@ class _DashboardPageState extends State<DashboardPage> {
                         const Text("Total Balance", style: TextStyle(color: Colors.white70, fontSize: 16)),
                         const SizedBox(height: 10),
                         Text("${state.formattedBalance} RDD", style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 5),
+                        Text("≈ ${state.fiatValue}", style: const TextStyle(color: Colors.greenAccent, fontSize: 16, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 15),
                         Text(state.address.substring(0, 12) + "..." + state.address.substring(state.address.length - 4), style: const TextStyle(color: Colors.white54, fontSize: 12, fontFamily: 'monospace')),
                       ],
