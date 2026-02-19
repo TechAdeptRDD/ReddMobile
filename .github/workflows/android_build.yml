@@ -52,7 +52,7 @@ jobs:
         run: |
           cd flutter_app
           flutter pub get
-          flutter build apk --debug --dart-define=VERSION=${{ github.ref_name }}
+          flutter build apk --debug --dart-define=APP_VERSION=${{ github.ref_name }} --dart-define=VERSION=${{ github.ref_name }}
 
       # 6. Create GitHub Release & Upload APK
       - name: Create Release
