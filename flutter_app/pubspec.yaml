@@ -1,6 +1,6 @@
 name: redd_mobile
 description: "ReddMobile: Socially Sustainable Web3 Wallet"
-version: 0.14.3+3
+version: 0.14.4+4
 publish_to: 'none'
 
 environment:
@@ -28,14 +28,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  flutter_launcher_icons: 0.13.1
-
-# Simplified config to avoid RangeError crash
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/images/logo.png"
-  # Adaptive icons disabled to prevent CI image-processing index errors
 
 flutter:
   uses-material-design: true
