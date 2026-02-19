@@ -56,6 +56,17 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   @override
+  Widget _buildNetworkStat(String label, String value, IconData icon, {Color color = Colors.grey}) {
+    return Column(
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+      ],
+    );
+  }
+
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F0F),

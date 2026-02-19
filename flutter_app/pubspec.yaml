@@ -37,3 +37,10 @@ flutter_launcher_icons:
   image_path: "assets/images/logo.png"
   min_sdk_android: 21
 
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo.png"
+  adaptive_icon_background: "#E31B23"
+  adaptive_icon_foreground: "assets/images/logo.png"

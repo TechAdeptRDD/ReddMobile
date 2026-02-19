@@ -14,3 +14,8 @@ ReddMobile uses a "Zero-Visibility" model for private keys:
 ## 3. Localization & Oracle Layer
 * **Pricing:** The `DashboardBloc` polls the CoinGecko API based on the user's `fiat_pref` stored in `SecureStorageService`.
 * **QR Logic:** The `ScanPage` utilizes `mobile_scanner` to parse `redd://pay` deep links and raw RDD addresses.
+
+## 4. The Pulse Engine (Social + Network)
+* **PulseService:** Aggregates data from the Blockbook API.
+* **Network Vitals:** Maps raw blockchain data (difficulty, block height) into a human-readable "Heartbeat" for the user.
+* **Social Feed:** Decodes `OP_RETURN` hex data from recent transactions to display public tip memos, creating a "Community Square" feel.

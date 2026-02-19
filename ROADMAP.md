@@ -14,6 +14,8 @@
 - [x] **Web2 Linking:** Cryptographic bio-signatures for X/Twitter & Discord.
 - [x] **ReddDrop Faucet:** Automated onboarding for zero-balance users.
 - [x] **QR Scanner:** Native camera integration for peer-to-peer tipping.
+- [x] **Network Health Snapshot:** Real-time difficulty and PoSV vitals.
+- [x] **Global Social Pulse:** Live blockchain feed of community tipping activity.
 
 ## Phase 4: Decentralization (Future)
 - [ ] **SPV Light Client:** Move away from Blockbook to a true SPV model.
