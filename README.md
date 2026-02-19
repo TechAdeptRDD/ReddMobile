@@ -1,20 +1,18 @@
-# 🔴 ReddMobile: The Decentralized Social Wallet
+# 🔴 ReddMobile: Socially Sustainable Web3 Wallet
 
-ReddMobile is a next-generation, non-custodial cryptocurrency wallet built for the Reddcoin (RDD) network. It bridges institutional-grade Rust cryptography with a hyper-social, gamified Flutter frontend, creating the ultimate Web3 tipping ecosystem for "ReddHeads."
+ReddMobile is the flagship non-custodial wallet for the Reddcoin (RDD) ecosystem. It combines institutional-grade Rust cryptography with a hyper-social, community-first Flutter frontend.
 
 ## ✨ Core Features
-* **Offline Rust Cryptography:** ECDSA transaction forging, BIP39 seed generation, and BIP44 derivation are executed entirely in a memory-safe `librust_core.so` FFI sandbox.
-* **Biometric Vault:** Hardware-backed `flutter_secure_storage` protected by mandatory FaceID/Fingerprint OS-level locks.
-* **ReddID Ecosystem:** Decentralized identity protocol utilizing `OP_RETURN` payloads to link human-readable `@usernames` and IPFS avatars directly to the blockchain.
-* **Gamified Social Tipping:**
-  * **Smart Tips:** Context-aware preset buttons (☕ Coffee, 🍕 Pizza) with tactile haptic feedback.
-  * **Velocity Leaderboard:** Real-time tracking of the network's most active tippers (PoSV gamification).
-  * **On-Chain Memos:** Attach public messages to your tips, readable in the Global Activity Feed.
-* **Redundant Network Architecture:** Intelligent Blockbook node routing with in-memory caching to guarantee maximum uptime, speed, and API protection.
-* **VIP Exportable ReddCards:** Generate beautiful, high-res receive cards to share directly to Web2 social media.
+* **Native Web3 Identity:** Register `@usernames` and upload avatars directly to IPFS from the camera roll.
+* **Web2 Identity Anchoring:** Cryptographically link X/Twitter and Discord accounts via bio-signature verification.
+* **Offline Rust Sandbox:** Private keys never leave the memory-safe Rust FFI environment.
+* **Community First UI:**
+  * **ReddDrop Faucet:** Onboarding for new users with zero-balance welcome funds.
+  * **Charity Quick-Select:** One-tap tipping for verified community causes.
+  * **Fiat Localization:** Live price tracking in USD, EUR, GBP, JPY, and CAD.
+* **Real-World Ready:** Built-in QR scanner for VIP ReddCards and deep-link payment processing.
 
-## 🚀 Getting Started
-Please see `CONTRIBUTING.md` for instructions on how to set up the Rust compilation targets before running the Flutter application.
-
----
-*Built by the community, for the future of decentralized social finance.*
+## 🚀 Technical Requirements
+* Flutter SDK (Stable v3.19.0)
+* Rust Toolchain (aarch64/armv7/x86_64 targets)
+* Android NDK
