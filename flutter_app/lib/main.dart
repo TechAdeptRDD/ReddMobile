@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'bloc/dashboard/dashboard_bloc.dart';
 import 'bloc/activity/activity_bloc.dart';
 import 'services/blockbook_service.dart';
+import 'pages/dashboard_page.dart';
 import 'pages/social_page.dart';
 import 'pages/activity_page.dart';
 
@@ -29,24 +30,24 @@ class ReddMobileApp extends StatelessWidget {
           scaffoldBackgroundColor: const Color(0xFF0F0F0F),
           primaryColor: const Color(0xFFE31B23),
         ),
-        // For testing the new features, we default to the Social Page
         home: const MainNavigation(),
       ),
     );
   }
 }
 
-// Simple Bottom Nav to swap between features
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
   @override State<MainNavigation> createState() => _MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int _currentIndex = 0;
+  int _currentIndex = 1; // Start on the Dashboard (middle tab)
+  
   final List<Widget> _pages = [
-    const SocialPage(),   // The Registration / Search tab
-    const ActivityPage(), // The Global Feed tab
+    const SocialPage(),   // 0: The Registration / Search tab
+    const DashboardPage(),// 1: The Wallet Dashboard
+    const ActivityPage(), // 2: The Global Feed tab
   ];
 
   @override
@@ -61,7 +62,8 @@ class _MainNavigationState extends State<MainNavigation> {
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.person_search), label: "Identity"),
-          BottomNavigationBarItem(icon: Icon(Icons.public), label: "Global Feed"),
+          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Wallet"),
+          BottomNavigationBarItem(icon: Icon(Icons.public), label: "Global"),
         ],
       ),
     );
