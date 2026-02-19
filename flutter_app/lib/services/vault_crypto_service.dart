@@ -13,16 +13,17 @@ class VaultCryptoService {
     }
   }
 
-  // Renamed 'privKey' to 'privateKeyHex' to match the Bloc's expectation
+  // Finalized mock signature to match DashboardBloc requirements
   String signMultiInputTransaction({
     required String privateKeyHex, 
     required List<dynamic> utxos,
     required String destination,
     required double amount,
+    required String changeAddress, // Added to match the Bloc's call
     String? opReturnData,
   }) {
-    // Mock implementation for v0.1.7 testing in Appetize.io
-    return "mock_signed_tx_hex_for_v0.1.7_success"; 
+    // Mock implementation for v0.1.7 verification
+    return "mock_signed_tx_hex_v0.1.7_final_success"; 
   }
 
   String signTransaction(String txData) {
