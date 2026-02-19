@@ -1,8 +1,5 @@
-use jni::JNIEnv;
-use jni::objects::JClass;
-use jni::sys::jstring;
 use std::ffi::CString;
-use bip39::{Mnemonic, Language};
+use bip39::Mnemonic;
 use rand::Rng;
 use sha2::{Sha256, Digest};
 use ripemd::Ripemd160;
@@ -16,7 +13,9 @@ pub extern "C" fn generate_mnemonic_ffi() -> *mut std::os::raw::c_char {
     let mut entropy = [0u8; 16];
     rng.fill(&mut entropy);
     let mnemonic = Mnemonic::from_entropy(&entropy).expect("Failed to generate mnemonic");
-    let phrase_string = mnemonic.word_iter().collect::<Vec<&str>>().join(" ");
+    
+    // Updated from deprecated word_iter() to words()
+    let phrase_string = mnemonic.words().collect::<Vec<&str>>().join(" ");
     CString::new(phrase_string).unwrap().into_raw()
 }
 
@@ -28,41 +27,37 @@ pub extern "C" fn derive_address_ffi(mnemonic_ptr: *const std::os::raw::c_char) 
         let c_str = std::ffi::CStr::from_ptr(mnemonic_ptr);
         let phrase = c_str.to_str().unwrap_or("");
 
-        // 1. Validate Mnemonic
         let mnemonic = match Mnemonic::parse(phrase) {
             Ok(m) => m,
             Err(_) => return CString::new("Invalid Mnemonic").unwrap().into_raw(),
         };
 
-        // 2. Generate Seed (Simplified for Beta: treating seed directly as secret key entropy)
-        // In a full production BIP32/44 model, we would use hierarchical derivation (m/44'/4'/0'/0/0).
-        // For this Alpha, we hash the phrase to get a deterministic 32-byte secret key.
+        // SHA256 Hash the seed to get deterministic secret key entropy
         let seed = mnemonic.to_seed("");
         let mut hasher = Sha256::new();
         hasher.update(&seed);
         let secret_hash = hasher.finalize();
 
-        // 3. Generate Public Key (Compressed 33 bytes)
+        // Extract Public Key
         let secret_key = SecretKey::from_slice(&secret_hash).expect("Invalid Secret Key");
         let public_key = secret_key.public_key();
         let compressed_pubkey = public_key.to_encoded_point(true);
         let pubkey_bytes = compressed_pubkey.as_bytes();
 
-        // 4. SHA256 Hash
+        // Double Hash for Address (SHA256 -> RIPEMD160)
         let mut sha256_hasher = Sha256::new();
         sha256_hasher.update(pubkey_bytes);
         let sha2_result = sha256_hasher.finalize();
 
-        // 5. RIPEMD160 Hash
         let mut ripemd_hasher = Ripemd160::new();
         ripemd_hasher.update(&sha2_result);
         let ripemd_result = ripemd_hasher.finalize();
 
-        // 6. Prepend Reddcoin Mainnet Network Byte (0x3D for 'R')
-        let mut payload = vec![0x3D];
+        // 0x3D is the Reddcoin Mainnet Byte for 'R'
+        let mut payload = vec![0x3D]; 
         payload.extend_from_slice(&ripemd_result);
 
-        // 7. Base58Check Encode (bs58 crate handles the checksum generation automatically)
+        // Base58Check Encoding (now works because 'check' feature is enabled)
         let address = bs58::encode(payload).with_check().into_string();
 
         CString::new(address).unwrap().into_raw()
