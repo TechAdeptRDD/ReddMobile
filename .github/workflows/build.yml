@@ -26,21 +26,17 @@ jobs:
       - name: Install Rust target
         run: rustup target add aarch64-linux-android x86_64-linux-android
           
+      # NEW: Install the dedicated Android cross-compilation tool
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
       - name: Build Rust Core
         run: |
           cd rust_core
-          # FORCE CACHE BUST: Prevent ELF format mismatch during cross-compilation
           cargo clean
-          
-          # Build aarch64
-          cargo build --target aarch64-linux-android --release
-          # Build x86_64
-          cargo build --target x86_64-linux-android --release
-          
-          mkdir -p ../flutter_app/android/app/src/main/jniLibs/arm64-v8a
-          mkdir -p ../flutter_app/android/app/src/main/jniLibs/x86_64
-          cp target/aarch64-linux-android/release/librust_core.so ../flutter_app/android/app/src/main/jniLibs/arm64-v8a/
-          cp target/x86_64-linux-android/release/librust_core.so ../flutter_app/android/app/src/main/jniLibs/x86_64/
+          # cargo-ndk automatically uses the correct Android linkers 
+          # and routes the output safely into Flutter's jniLibs folder.
+          cargo ndk -t arm64-v8a -t x86_64 -o ../flutter_app/android/app/src/main/jniLibs build --release
 
       - name: Build Flutter APK
         run: |
