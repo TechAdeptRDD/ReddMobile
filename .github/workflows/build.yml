@@ -81,4 +81,5 @@ jobs:
         with:
           name: ReddMobile ${{ github.ref_name }}
           body_path: release_notes.md
+          make_latest: "true"
           files: flutter_app/build/app/outputs/flutter-apk/ReddMobile-*.apk
