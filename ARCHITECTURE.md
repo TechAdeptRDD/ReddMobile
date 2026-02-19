@@ -1,21 +1,15 @@
 # 🏗️ ReddMobile Systems Architecture
 
-## 1. Cryptographic Bridge (Rust <-> Dart)
-ReddMobile uses a "Zero-Visibility" model for private keys:
-* **Storage:** Mnemonics are encrypted in the Hardware Secure Enclave (Keystore/Keychain).
-* **Signing:** The `VaultCryptoService` passes encrypted data to `librust_core.so`.
-* **Verification:** Rust performs ECDSA signing and returns only the public HEX to Dart.
+## 1. RDD Protocol Implementation (PoSV v2)
+ReddMobile handles Reddcoin as a Social Currency. Unlike traditional PoS, Reddcoin utilizes **Proof of Stake Velocity v2**.
+* **Coin Age:** Non-linear aging incentivizes movement (Velocity) over hoarding.
+* **Network Snapshot:** The Dashboard displays real-time Network Difficulty and Block Height to provide transparency on PoSV health.
 
-## 2. Identity Stack (ReddID + IPFS)
-* **Storage:** Avatars are pinned to IPFS using `IpfsService` via native multipart uploads.
-* **On-Chain:** The CID and Handle are committed to the blockchain via `OP_RETURN` payloads.
-* **Resolution:** The `BlockbookService` parses transaction history to resolve handles back to wallet addresses.
+## 2. Social Data Layer (OP_RETURN)
+* **Metadata:** Tips can include memos stored in the `OP_RETURN` field of a transaction.
+* **Size Limit:** Max 80 bytes per transaction.
+* **Parsing:** The `PulseService` decodes these social anchors and filters for printable ASCII to ensure a clean community feed.
 
-## 3. Localization & Oracle Layer
-* **Pricing:** The `DashboardBloc` polls the CoinGecko API based on the user's `fiat_pref` stored in `SecureStorageService`.
-* **QR Logic:** The `ScanPage` utilizes `mobile_scanner` to parse `redd://pay` deep links and raw RDD addresses.
-
-## 4. The Pulse Engine (Social + Network)
-* **PulseService:** Aggregates data from the Blockbook API.
-* **Network Vitals:** Maps raw blockchain data (difficulty, block height) into a human-readable "Heartbeat" for the user.
-* **Social Feed:** Decodes `OP_RETURN` hex data from recent transactions to display public tip memos, creating a "Community Square" feel.
+## 3. Cryptographic Security
+* **Rust Core:** Transaction signing (ECDSA) and Seed derivation occur in the `librust_core.so` FFI boundary.
+* **Storage:** Mnemonics are encrypted via OS-level KeyStore/Keychain.
