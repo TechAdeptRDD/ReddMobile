@@ -169,6 +169,21 @@ class _SendDialogState extends State<SendDialog> {
                 const Text("Send RDD", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 15),
 
+                const Text("Community Causes:", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 40,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      ActionChip(backgroundColor: Colors.black26, side: const BorderSide(color: Colors.greenAccent, width: 1), avatar: const Icon(Icons.favorite, size: 14, color: Colors.greenAccent), label: const Text("Dev Fund", style: TextStyle(color: Colors.white)), onPressed: () { _addressController.text = "RvY...DevFundAddress"; _onAddressChanged(); }),
+                      const SizedBox(width: 8),
+                      ActionChip(backgroundColor: Colors.black26, side: const BorderSide(color: Colors.blueAccent, width: 1), avatar: const Icon(Icons.water_drop, size: 14, color: Colors.blueAccent), label: const Text("Clean Water", style: TextStyle(color: Colors.white)), onPressed: () { _addressController.text = "RcW...CharityAddress"; _onAddressChanged(); }),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
                 if (_contacts.isNotEmpty) ...[
                   const Text("Quick Select:", style: TextStyle(color: Colors.grey, fontSize: 12)),
                   const SizedBox(height: 8),

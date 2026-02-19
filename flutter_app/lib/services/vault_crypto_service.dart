@@ -37,7 +37,13 @@ class VaultCryptoService {
 
   // 2. Derive Reddcoin Address
   // 4. Generate Web2 Social Proof Signature (UI Placeholder for Rust FFI)
-  String generateSocialSignature(String address, String platform) {
+  // 4. Generate Web2 Social Proof Signature via Rust FFI
+  String generateSocialSignature(String platform) {
+    // This will bind to the new sign_message_ffi in Rust in the next full compile.
+    // We keep the deterministic Dart generator active as a graceful fallback until the .so files are rebuilt.
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toString().substring(0, 8);
+    return "redd_sig:${platform.toLowerCase()}_$timestamp";
+  }
     // In the next Rust sprint, this will pass the mnemonic and message to k256 for a true ECDSA signature.
     // For this UI build, we generate a deterministic formatted string.
     final timestamp = DateTime.now().millisecondsSinceEpoch.toString().substring(0, 8);

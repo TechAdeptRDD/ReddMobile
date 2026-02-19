@@ -127,6 +127,35 @@ class _DashboardPageState extends State<DashboardPage> {
                   const Text("Recent Transactions", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 15),
                   
+                  // Empathy & Onboarding: The ReddDrop Faucet
+                  if (state.formattedBalance == "0.00")
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 30),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(color: const Color(0xFFE31B23).withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE31B23), width: 1)),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.volunteer_activism, color: Color(0xFFE31B23), size: 40),
+                          const SizedBox(height: 10),
+                          const Text("Welcome to the Community!", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          const Text("ReddCoin is about sharing. Claim your first coins from the community pool to start tipping immediately.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.4)),
+                          const SizedBox(height: 15),
+                          SizedBox(
+                            width: double.infinity, height: 45,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE31B23), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Requesting ReddDrop from Community Faucet..."), backgroundColor: Colors.greenAccent));
+                                // In V2, this will ping the community faucet API with the user's address
+                              },
+                              child: const Text("CLAIM WELCOME RDD", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+
                   if (state.history.isEmpty) const Padding(padding: EdgeInsets.only(top: 20), child: Center(child: Text("No transactions yet.", style: TextStyle(color: Colors.grey)))),
                   
                   ...state.history.map((tx) {
