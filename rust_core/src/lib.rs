@@ -63,3 +63,50 @@ pub extern "C" fn rust_cstr_free(s: *mut std::os::raw::c_char) {
         let _ = CString::from_raw(s);
     };
 }
+
+use serde::Deserialize;
+
+#[derive(Deserialize, Debug)]
+pub struct Utxo {
+    pub txid: String,
+    pub vout: u32,
+    pub value: u64,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TransactionRequest {
+    pub private_key_hex: String,
+    pub destination_address: String,
+    pub amount_sats: u64,
+    pub change_address: String,
+    pub fee_sats: u64,
+    pub utxos: Vec<Utxo>,
+}
+
+#[no_mangle]
+pub extern "C" fn build_and_sign_tx_ffi(json_request_ptr: *const std::os::raw::c_char) -> *mut std::os::raw::c_char {
+    unsafe {
+        if json_request_ptr.is_null() { return std::ptr::null_mut(); }
+        let c_str = std::ffi::CStr::from_ptr(json_request_ptr);
+        let json_str = c_str.to_str().unwrap_or("");
+
+        // Attempt to parse the Flutter JSON into Rust Structs
+        let request: TransactionRequest = match serde_json::from_str(json_str) {
+            Ok(req) => req,
+            Err(e) => {
+                let err_msg = format!("JSON Parse Error: {}", e);
+                return CString::new(err_msg).unwrap().into_raw();
+            }
+        };
+
+        // TODO: In the next phase, we will serialize the exact bytes and use k256 to sign.
+        // For now, we return a dynamic string proving Rust successfully read the Flutter data!
+        let mock_hex_response = format!(
+            "MOCK_HEX_READY_FOR_BROADCAST_WITH_{}_UTXOS_TO_{}", 
+            request.utxos.len(), 
+            request.destination_address
+        );
+        
+        CString::new(mock_hex_response).unwrap().into_raw()
+    }
+}
