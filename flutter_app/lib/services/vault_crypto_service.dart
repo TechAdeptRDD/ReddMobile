@@ -36,6 +36,15 @@ class VaultCryptoService {
   }
 
   // 2. Derive Reddcoin Address
+  // 4. Generate Web2 Social Proof Signature (UI Placeholder for Rust FFI)
+  String generateSocialSignature(String address, String platform) {
+    // In the next Rust sprint, this will pass the mnemonic and message to k256 for a true ECDSA signature.
+    // For this UI build, we generate a deterministic formatted string.
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toString().substring(0, 8);
+    final payload = "redd_sig:${platform.toLowerCase()}_${address.substring(0,8)}_$timestamp";
+    return payload;
+  }
+
   String deriveReddcoinAddress(String mnemonic) {
     final deriveFunc = _rustLib.lookupFunction<DeriveAddressC, DeriveAddressDart>('derive_address_ffi');
     final freeFunc = _rustLib.lookupFunction<FreeStringC, FreeStringDart>('rust_cstr_free');

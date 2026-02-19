@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import '../services/secure_storage_service.dart';
+import '../services/vault_crypto_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -11,6 +13,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final SecureStorageService _storage = SecureStorageService();
+  final VaultCryptoService _vault = VaultCryptoService();
   final LocalAuthentication _auth = LocalAuthentication();
   
   List<Map<String, String>> _contacts = [];
@@ -34,9 +37,57 @@ class _SettingsPageState extends State<SettingsPage> {
     await _storage.removeContact(handle);
     _loadData();
   }
-    _contacts.remove(handle);
-    await _storage.saveContacts(_contacts);
-    setState(() {});
+
+  void _generateAndShowSignature(String platform) async {
+    final mnemonic = await _storage.getMnemonic();
+    if (mnemonic == null) return;
+    
+    final address = _vault.deriveReddcoinAddress(mnemonic);
+    final signature = _vault.generateSocialSignature(address, platform);
+
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF151515),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Icon(platform == "X (Twitter)" ? Icons.alternate_email : Icons.discord, color: Color(0xFFE31B23)),
+              const SizedBox(width: 10),
+              Text("Link $platform", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Paste this cryptographic signature into your bio or profile description. Our decentralized indexer will verify it automatically.", style: TextStyle(color: Colors.grey, height: 1.4, fontSize: 14)),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white24)),
+                child: Text(signature, style: const TextStyle(color: Colors.greenAccent, fontFamily: 'monospace', fontSize: 13, letterSpacing: 1.2)),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("CLOSE", style: TextStyle(color: Colors.grey))),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE31B23), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                Clipboard.setData(ClipboardData(text: signature));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Signature copied to clipboard!"), backgroundColor: Color(0xFFE31B23)));
+                Navigator.pop(context);
+              },
+              icon: const Icon(Icons.copy, color: Colors.white, size: 16),
+              label: const Text("COPY", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Future<void> _revealRecoveryPhrase() async {
@@ -61,20 +112,6 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  void _showSocialLinkDialog(String platform) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF151515),
-        title: Text("Link $platform", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text("To link this platform, ReddMobile will generate a unique cryptographic signature.\n\nYou will paste this signature into your Web2 bio. Our decentralized oracle will verify it and permanently anchor your identity to the blockchain.", style: TextStyle(color: Colors.grey, height: 1.5)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("GENERATE SIGNATURE (SOON)", style: TextStyle(color: Color(0xFFE31B23)))),
-        ],
-      ),
-    );
-  }
-
   void _showPhraseDialog(String message) {
     showDialog(
       context: context,
@@ -82,9 +119,7 @@ class _SettingsPageState extends State<SettingsPage> {
         backgroundColor: const Color(0xFF151515),
         title: const Text("Recovery Phrase", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
         content: Text(message, style: const TextStyle(color: Colors.white, fontSize: 18, height: 1.5)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("CLOSE", style: TextStyle(color: Colors.grey))),
-        ],
+        actions: [ TextButton(onPressed: () => Navigator.pop(context), child: const Text("CLOSE", style: TextStyle(color: Colors.grey))) ],
       ),
     );
   }
@@ -99,6 +134,12 @@ class _SettingsPageState extends State<SettingsPage> {
         : ListView(
             padding: const EdgeInsets.all(24),
             children: [
+              const Text("Web3 Social Identities", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Card(color: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), child: ListTile(leading: const Icon(Icons.alternate_email, color: Colors.lightBlue), title: const Text("Link X / Twitter", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), subtitle: const Text("Generate Bio Signature", style: TextStyle(color: Colors.grey, fontSize: 12)), trailing: const Icon(Icons.chevron_right, color: Colors.grey), onTap: () => _generateAndShowSignature("X (Twitter)"))),
+              Card(color: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), child: ListTile(leading: const Icon(Icons.discord, color: Colors.deepPurpleAccent), title: const Text("Link Discord", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), subtitle: const Text("Generate Bio Signature", style: TextStyle(color: Colors.grey, fontSize: 12)), trailing: const Icon(Icons.chevron_right, color: Colors.grey), onTap: () => _generateAndShowSignature("Discord"))),
+              const SizedBox(height: 40),
+
               const Text("Security Vault", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Card(
@@ -114,13 +155,6 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: 40),
               
-              const Text("Web3 Social Identities", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              Card(color: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), child: ListTile(leading: const Icon(Icons.alternate_email, color: Colors.lightBlue), title: const Text("Link X / Twitter", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), trailing: const Icon(Icons.add_link, color: Colors.grey), onTap: () => _showSocialLinkDialog("X (Twitter)"))),
-              Card(color: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), child: ListTile(leading: const Icon(Icons.telegram, color: Colors.blueAccent), title: const Text("Link Telegram", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), trailing: const Icon(Icons.add_link, color: Colors.grey), onTap: () => _showSocialLinkDialog("Telegram"))),
-              Card(color: const Color(0xFF151515), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), child: ListTile(leading: const Icon(Icons.discord, color: Colors.deepPurpleAccent), title: const Text("Link Discord", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), trailing: const Icon(Icons.add_link, color: Colors.grey), onTap: () => _showSocialLinkDialog("Discord"))),
-              const SizedBox(height: 40),
-
               const Text("Address Book", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               if (_contacts.isEmpty)
