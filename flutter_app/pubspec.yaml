@@ -13,11 +13,20 @@ dependencies:
   ffi: ^2.1.0
   http: ^1.1.0
   path_provider: ^2.1.1
+  # Core crypto UI dependencies
+  flutter_native_splash: ^2.3.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+
+flutter_native_splash:
+  color: "#0F0F0F" # The Obsidian Black background
+  image: assets/branding/redd_logo_full.png # The full Redd logo
+  android_12:
+    image: assets/branding/redd_icon.png # The Mosaic Icon for Android 12+ launch
+    color: "#0F0F0F"
 
 flutter:
   uses-material-design: true
