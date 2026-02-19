@@ -13,16 +13,17 @@ class VaultCryptoService {
     }
   }
 
-  // Finalized mock signature to match DashboardBloc requirements
+  // Fully synchronized signature to match DashboardBloc requirements
   String signMultiInputTransaction({
     required String privateKeyHex, 
     required List<dynamic> utxos,
     required String destination,
     required double amount,
-    required String changeAddress, // Added to match the Bloc's call
+    required String changeAddress,
+    required double feePerKb, // Added to resolve the build error
     String? opReturnData,
   }) {
-    // Mock implementation for v0.1.7 verification
+    // Mock successful return for v0.1.7 UI testing
     return "mock_signed_tx_hex_v0.1.7_final_success"; 
   }
 
