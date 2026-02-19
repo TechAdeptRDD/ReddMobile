@@ -1,6 +1,6 @@
 name: redd_mobile
 description: "ReddMobile: Socially Sustainable Web3 Wallet"
-version: 0.14.0+1
+version: 0.14.1+2
 publish_to: 'none'
 
 environment:
@@ -16,12 +16,13 @@ dependencies:
   bip39: ^1.0.6
   hex: ^0.2.0
   share_plus: ^7.2.1
+  # Explicit locks for Dart 3.3.0 compatibility
   path_provider: 2.1.2
   url_launcher: 6.3.1
-  screenshot: 2.1.1
+  screenshot: 2.3.0
   mobile_scanner: 3.5.6
   image_picker: 1.0.4
-  local_auth: ^2.1.6
+  local_auth: 2.1.6
   qr_flutter: ^4.1.0
 
 dev_dependencies:
