@@ -7,18 +7,26 @@ class VaultCryptoService {
 
   VaultCryptoService() {
     if (Platform.isAndroid) {
-      // On Android, the OS automatically finds the .so file in the app's native library folder.
-      // This is essential for the x86_64 emulator and ARM devices.
       _nativeLib = ffi.DynamicLibrary.open("librust_core.so");
     } else {
-      // Fallback for Linux/Codespace environments
       _nativeLib = ffi.DynamicLibrary.open("librust_core.so");
     }
   }
 
-  // Current interface for signed operations
+  // Restoring the specific method name required by DashboardBloc
+  String signMultiInputTransaction({
+    required String privKey,
+    required List<dynamic> utxos,
+    required String destination,
+    required double amount,
+    String? opReturnData,
+  }) {
+    // This is currently a mock that will be wired to the Rust 
+    // FFI in the upcoming BIP39 sprint.
+    return "mock_signed_tx_hex_for_v0.1.7"; 
+  }
+
   String signTransaction(String txData) {
-    // This will be expanded as we build out the BIP39 logic
     return "Signed: $txData"; 
   }
 }
