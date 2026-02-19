@@ -5,6 +5,7 @@ use sha2::{Sha256, Digest};
 use ripemd::Ripemd160;
 use k256::elliptic_curve::sec1::ToEncodedPoint;
 use k256::SecretKey;
+use serde::Deserialize;
 
 #[no_mangle]
 pub extern "C" fn generate_mnemonic_ffi() -> *mut std::os::raw::c_char {
@@ -12,7 +13,6 @@ pub extern "C" fn generate_mnemonic_ffi() -> *mut std::os::raw::c_char {
     let mut entropy = [0u8; 16];
     rng.fill(&mut entropy);
     let mnemonic = Mnemonic::from_entropy(&entropy).expect("Failed to generate mnemonic");
-    
     let phrase_string = mnemonic.words().collect::<Vec<&str>>().join(" ");
     CString::new(phrase_string).unwrap().into_raw()
 }
@@ -51,20 +51,11 @@ pub extern "C" fn derive_address_ffi(mnemonic_ptr: *const std::os::raw::c_char) 
         payload.extend_from_slice(&ripemd_result);
 
         let address = bs58::encode(payload).with_check().into_string();
-
         CString::new(address).unwrap().into_raw()
     }
 }
 
-#[no_mangle]
-pub extern "C" fn rust_cstr_free(s: *mut std::os::raw::c_char) {
-    unsafe {
-        if s.is_null() { return }
-        let _ = CString::from_raw(s);
-    };
-}
-
-use serde::Deserialize;
+// --- NEW: JSON FFI BRIDGE --- //
 
 #[derive(Deserialize, Debug)]
 pub struct Utxo {
@@ -90,7 +81,6 @@ pub extern "C" fn build_and_sign_tx_ffi(json_request_ptr: *const std::os::raw::c
         let c_str = std::ffi::CStr::from_ptr(json_request_ptr);
         let json_str = c_str.to_str().unwrap_or("");
 
-        // Attempt to parse the Flutter JSON into Rust Structs
         let request: TransactionRequest = match serde_json::from_str(json_str) {
             Ok(req) => req,
             Err(e) => {
@@ -99,14 +89,22 @@ pub extern "C" fn build_and_sign_tx_ffi(json_request_ptr: *const std::os::raw::c
             }
         };
 
-        // TODO: In the next phase, we will serialize the exact bytes and use k256 to sign.
-        // For now, we return a dynamic string proving Rust successfully read the Flutter data!
+        // Return a dynamic string proving Rust successfully parsed the array of UTXOs
         let mock_hex_response = format!(
-            "MOCK_HEX_READY_FOR_BROADCAST_WITH_{}_UTXOS_TO_{}", 
-            request.utxos.len(), 
+            "SUCCESS: Rust parsed {} UTXOs to send {} sats to {}", 
+            request.utxos.len(),
+            request.amount_sats,
             request.destination_address
         );
         
         CString::new(mock_hex_response).unwrap().into_raw()
     }
+}
+
+#[no_mangle]
+pub extern "C" fn rust_cstr_free(s: *mut std::os::raw::c_char) {
+    unsafe {
+        if s.is_null() { return }
+        let _ = CString::from_raw(s);
+    };
 }

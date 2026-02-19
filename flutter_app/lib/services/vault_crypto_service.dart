@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'package:ffi/ffi.dart';
@@ -9,16 +10,22 @@ typedef DeriveAddressDart = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8> mnemoni
 typedef FreeStringC = ffi.Void Function(ffi.Pointer<Utf8>);
 typedef FreeStringDart = void Function(ffi.Pointer<Utf8>);
 
+// NEW: JSON FFI Signature
+typedef BuildAndSignTxC = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8> jsonPayload);
+typedef BuildAndSignTxDart = ffi.Pointer<Utf8> Function(ffi.Pointer<Utf8> jsonPayload);
+
 class VaultCryptoService {
   late ffi.DynamicLibrary _nativeLib;
   late GenerateMnemonicDart _generateMnemonic;
   late DeriveAddressDart _deriveAddress;
+  late BuildAndSignTxDart _buildAndSignTx;
   late FreeStringDart _freeString;
 
   VaultCryptoService() {
     _nativeLib = ffi.DynamicLibrary.open("librust_core.so");
     _generateMnemonic = _nativeLib.lookup<ffi.NativeFunction<GenerateMnemonicC>>('generate_mnemonic_ffi').asFunction();
     _deriveAddress = _nativeLib.lookup<ffi.NativeFunction<DeriveAddressC>>('derive_address_ffi').asFunction();
+    _buildAndSignTx = _nativeLib.lookup<ffi.NativeFunction<BuildAndSignTxC>>('build_and_sign_tx_ffi').asFunction();
     _freeString = _nativeLib.lookup<ffi.NativeFunction<FreeStringC>>('rust_cstr_free').asFunction();
   }
 
@@ -38,7 +45,7 @@ class VaultCryptoService {
     return address;
   }
 
-  // Fully aligned with DashboardBloc parameters
+  // Safely passes complex UTXO data to Rust via JSON
   String signMultiInputTransaction({
     String privateKeyHex = "", 
     List<dynamic> utxos = const [],
@@ -46,8 +53,30 @@ class VaultCryptoService {
     double amount = 0.0,
     String changeAddress = "",
     double feePerKb = 1000.0,
-    String? opReturnData, // Restored this parameter
+    String? opReturnData,
   }) {
-    return "mock_signed_tx_hex_v0.5.3"; 
+    final requestData = {
+      "private_key_hex": privateKeyHex,
+      "destination_address": destination,
+      "amount_sats": (amount * 100000000).toInt(),
+      "change_address": changeAddress,
+      "fee_sats": 100000, 
+      "utxos": utxos.map((u) => {
+        "txid": u['txid'] ?? "",
+        "vout": u['vout'] ?? 0,
+        "value": int.tryParse(u['value'].toString()) ?? 0
+      }).toList(),
+    };
+
+    final jsonString = jsonEncode(requestData);
+    final jsonPtr = jsonString.toNativeUtf8();
+    
+    final resultPtr = _buildAndSignTx(jsonPtr);
+    final responseStr = resultPtr.toDartString();
+    
+    _freeString(resultPtr);
+    malloc.free(jsonPtr);
+    
+    return responseStr;
   }
 }
