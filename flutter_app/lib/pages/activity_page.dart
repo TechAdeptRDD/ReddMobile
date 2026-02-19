@@ -33,7 +33,32 @@ class _ActivityPageState extends State<ActivityPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F0F),
-      appBar: AppBar(title: const Text("Global Activity", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), backgroundColor: Colors.transparent, elevation: 0),
+      appBar: AppBar(
+        title: Row(
+          children: [
+            const Text("Global Activity", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            const Spacer(),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.2, end: 1.0),
+              duration: const Duration(seconds: 1),
+              builder: (context, opacity, child) {
+                return Opacity(
+                  opacity: opacity,
+                  child: Row(
+                    children: [
+                      Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.greenAccent, shape: BoxShape.circle)),
+                      const SizedBox(width: 6),
+                      const Text("Live Sync", style: TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                );
+              },
+              onEnd: () { /* The TweenAnimationBuilder resets naturally via state if we wanted infinite looping, but a single pulse on load is elegant */ },
+            ),
+          ],
+        ),
+        backgroundColor: Colors.transparent, elevation: 0,
+      ),
       body: BlocBuilder<ActivityBloc, ActivityState>(
         builder: (context, state) {
           if (state is ActivityLoading || state is ActivityInitial) return const Center(child: CircularProgressIndicator(color: Color(0xFFE31B23)));

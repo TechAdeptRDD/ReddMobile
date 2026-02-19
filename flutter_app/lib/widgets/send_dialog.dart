@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:confetti/confetti.dart';
 import '../services/blockbook_service.dart';
 import '../services/vault_crypto_service.dart';
@@ -77,6 +78,7 @@ class _SendDialogState extends State<SendDialog> {
   }
 
   void _setSmartTip(String amount, String memo) {
+    HapticFeedback.lightImpact();
     setState(() {
       _amountController.text = amount;
       _memoController.text = memo;
