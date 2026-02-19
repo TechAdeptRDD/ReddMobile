@@ -16,7 +16,7 @@ dependencies:
   share_plus: ^10.0.0
   flutter_bloc: ^9.1.1
   equatable: ^2.0.8
-  image_picker: ^1.1.2
+  image_picker: ^1.0.4
   app_links: ^6.1.1
   local_auth: ^2.1.6
   confetti: ^0.8.0

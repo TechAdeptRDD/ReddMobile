@@ -1,47 +1,34 @@
-import 'dart:convert';
 import 'dart:io';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-class IPFSService {
-  // For production, these should be securely injected via environment variables.
-  // We are using Pinata as the standard IPFS pinning provider.
-  final String _pinataApiKey = "YOUR_PINATA_API_KEY";
-  final String _pinataSecretKey = "YOUR_PINATA_SECRET_KEY";
-  final String _pinataUrl = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+class IpfsService {
+  // In production, this should be fetched from a secure community backend or hidden via proxy
+  // to prevent scraping, but this architecture directly interfaces with Pinata IPFS.
+  final String _pinataJwt = "YOUR_COMMUNITY_PINATA_JWT_PLACEHOLDER";
 
-  /// Uploads an image file to IPFS and returns the CID.
-  Future<String> uploadAvatar(File imageFile) async {
+  Future<String?> uploadAvatar(File imageFile) async {
     try {
-      // 1. Prepare the multipart HTTP request
-      var request = http.MultipartRequest("POST", Uri.parse(_pinataUrl));
+      var request = http.MultipartRequest("POST", Uri.parse("https://api.pinata.cloud/pinning/pinFileToIPFS"));
       
-      // 2. Attach the Pinata authentication headers
       request.headers.addAll({
-        'pinata_api_key': _pinataApiKey,
-        'pinata_secret_api_key': _pinataSecretKey,
+        "Authorization": "Bearer $_pinataJwt",
       });
-
-      // 3. Attach the image file
-      var multipartFile = await http.MultipartFile.fromPath(
-        'file',
-        imageFile.path,
-      );
-      request.files.add(multipartFile);
-
-      // 4. Send the payload to the IPFS network
+      
+      request.files.add(await http.MultipartFile.fromPath("file", imageFile.path));
+      
       var response = await request.send();
-      var responseData = await response.stream.toBytes();
-      var responseString = String.fromCharCodes(responseData);
-
+      
       if (response.statusCode == 200) {
-        final jsonData = json.decode(responseString);
-        return jsonData['IpfsHash']; // This is the CID we write to the blockchain
+        var responseData = await response.stream.bytesToString();
+        var json = jsonDecode(responseData);
+        return json["IpfsHash"]; // Returns the decentralized CID!
       } else {
-        throw Exception("IPFS Upload Failed: $responseString");
+        print("IPFS Node Rejected Upload: ${response.statusCode}");
       }
     } catch (e) {
-      print("IPFS Service Error: $e");
-      rethrow;
+      print("IPFS Upload Error: $e");
     }
+    return null;
   }
 }
