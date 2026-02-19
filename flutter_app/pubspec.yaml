@@ -1,6 +1,6 @@
 name: redd_mobile
 description: "ReddMobile: Socially Sustainable Web3 Wallet"
-version: 0.14.5+5
+version: 0.14.6+6
 publish_to: 'none'
 
 environment:

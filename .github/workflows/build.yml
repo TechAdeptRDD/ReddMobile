@@ -34,8 +34,6 @@ jobs:
           mkdir -p assets
           wget -qO assets/icon.png https://raw.githubusercontent.com/reddcoin-project/reddcoin/master/src/qt/res/icons/reddcoin.png || echo "Failed to fetch icon"
           
-          cat << 'ICON_CONFIG' > flutter_launcher_icons.yaml
-          flutter_launcher_icons:
             android: "ic_launcher"
             ios: true
             image_path: "assets/icon.png"
@@ -43,7 +41,6 @@ jobs:
           ICON_CONFIG
           
           flutter pub get
-          dart run flutter_launcher_icons
           
           # 3. Inject OS Intensions via Python
           python3 -c "
