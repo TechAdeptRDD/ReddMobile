@@ -1,17 +1,19 @@
 # 🗺️ ReddMobile Development Roadmap
 
-## Phase 1: Core Cryptography & Foundation (Complete)
-- [x] Rust-based ECDSA transaction signing (`rust_core`).
+## Phase 1: Core Cryptography & Foundation (✅ Complete)
+- [x] Rust-based ECDSA transaction signing via FFI.
 - [x] Secure storage for Mnemonic Seed Phrases.
 - [x] ReddID OP_RETURN broadcasting & IPFS Avatar linking.
-- [x] UI/UX Dashboard, Global Activity Feed, and BLoC State Management.
+- [x] UI/UX Dashboard and BLoC State Management.
 
-## Phase 2: Enhanced Social Connectivity (In Progress)
-- [x] **In-Feed Tipping:** Seamlessly send RDD to users directly from the global activity feed.
-- [ ] **Redd Links (Deep Linking):** Generate `redd://pay?user=@handle` URLs that open the app to a pre-filled transaction screen for sharing on Web2 platforms (X, Discord, etc.).
-- [ ] **Encrypted DMs (ECIES):** Utilize the Rust cryptography engine to allow users to send encrypted messages via IPFS that only the recipient's private key can read.
+## Phase 2: Enhanced Social Connectivity (✅ Complete)
+- [x] **In-Feed Tipping & On-Chain Memos:** Tip users directly with attached messages.
+- [x] **Gamification:** Velocity Leaderboard and "Redd Level" dynamic dashboard borders.
+- [x] **Exportable ReddCards:** High-res shareable receive screens.
+- [x] **Fiat Oracle:** Live RDD-to-USD conversion on the dashboard.
+- [x] **Redd Links (Deep Linking):** OS-level `redd://pay?user=@handle` interception.
 
-## Phase 3: Network Resilience & Security
-- [ ] **Fallback Indexers:** Implement an array of backup Blockbook nodes to ensure the wallet functions even if the primary Reddcoin indexer goes offline.
-- [ ] **SPV (Simplified Payment Verification):** Transition from relying on centralized indexers to a Light Client model that verifies transactions directly against the P2P network.
-- [ ] **Biometric Lock:** Integrate `local_auth` to require FaceID/Fingerprint when reopening the app or confirming a transaction.
+## Phase 3: Web2 Integration & Privacy (Current Focus)
+- [ ] **Web2 Cryptographic Linking:** Allow users to bind X/Twitter and Discord identities to their ReddID via bio-signature verification.
+- [ ] **Encrypted DMs (ECIES):** Utilize the Rust cryptography engine to encrypt IPFS payloads so *only* the recipient's private key can decrypt private social messages.
+- [ ] **SPV (Simplified Payment Verification):** Transition from centralized Blockbook indexers to a Light Client model.

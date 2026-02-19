@@ -1,25 +1,20 @@
 # 🔴 ReddMobile: The Decentralized Social Wallet
 
-ReddMobile is a next-generation, non-custodial cryptocurrency wallet built for the Reddcoin (RDD) network. It goes beyond simple value transfer by integrating **ReddID**, a decentralized identity protocol that links human-readable `@usernames` and IPFS avatars directly to the blockchain.
+ReddMobile is a next-generation, non-custodial cryptocurrency wallet built for the Reddcoin (RDD) network. It bridges institutional-grade Rust cryptography with a hyper-social, gamified Flutter frontend, creating the ultimate Web3 tipping ecosystem for "ReddHeads."
 
 ## ✨ Core Features
-* **True Non-Custodial Security:** Private keys never leave the device. Seed phrases are stored in encrypted hardware enclaves via `flutter_secure_storage`.
-* **Rust Cryptographic Engine:** ECDSA signatures, BIP32/BIP39/BIP44 derivation, and raw transaction serialization are handled entirely offline by a highly optimized, memory-safe Rust core via FFI.
-* **ReddID Ecosystem:** Claim a unique `@handle`, upload an avatar to IPFS, and permanently anchor your identity to the blockchain using custom `OP_RETURN` payloads.
-* **Social Resolution:** Send funds to `@usernames` instead of long cryptographic addresses. The wallet automatically queries the decentralized index to verify the recipient's identity and IPFS avatar.
-* **Web3 Activity Feed:** Watch a real-time, global feed of users claiming identities and tipping each other on the network.
-
-## 🛠️ Tech Stack
-* **Frontend:** Flutter (Dart) & BLoC State Management
-* **Cryptography:** Rust (compiled to Android `jniLibs` via `cargo-ndk`)
-* **Decentralized Storage:** IPFS (InterPlanetary File System)
-* **Blockchain Indexing:** Blockbook API
+* **Offline Rust Cryptography:** ECDSA transaction forging, BIP39 seed generation, and BIP44 derivation are executed entirely in a memory-safe `librust_core.so` FFI sandbox.
+* **Biometric Vault:** Hardware-backed `flutter_secure_storage` protected by mandatory FaceID/Fingerprint OS-level locks.
+* **ReddID Ecosystem:** Decentralized identity protocol utilizing `OP_RETURN` payloads to link human-readable `@usernames` and IPFS avatars directly to the blockchain.
+* **Gamified Social Tipping:**
+  * **Smart Tips:** Context-aware preset buttons (☕ Coffee, 🍕 Pizza) with tactile haptic feedback.
+  * **Velocity Leaderboard:** Real-time tracking of the network's most active tippers (PoSV gamification).
+  * **On-Chain Memos:** Attach public messages to your tips, readable in the Global Activity Feed.
+* **Redundant Network Architecture:** Intelligent Blockbook node routing with in-memory caching to guarantee maximum uptime, speed, and API protection.
+* **VIP Exportable ReddCards:** Generate beautiful, high-res receive cards to share directly to Web2 social media.
 
 ## 🚀 Getting Started
-1. Clone the repository.
-2. Ensure you have the Flutter SDK (3.19.0+) and Rust Toolchain installed.
-3. Run `cargo ndk` in the `rust_core` directory to build the cryptographic engine.
-4. Run `flutter run` in the `flutter_app` directory.
+Please see `CONTRIBUTING.md` for instructions on how to set up the Rust compilation targets before running the Flutter application.
 
 ---
-*Built for the future of decentralized social tipping.*
+*Built by the community, for the future of decentralized social finance.*
