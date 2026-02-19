@@ -13,17 +13,16 @@ class VaultCryptoService {
     }
   }
 
-  // Restoring the specific method name required by DashboardBloc
+  // Renamed 'privKey' to 'privateKeyHex' to match the Bloc's expectation
   String signMultiInputTransaction({
-    required String privKey,
+    required String privateKeyHex, 
     required List<dynamic> utxos,
     required String destination,
     required double amount,
     String? opReturnData,
   }) {
-    // This is currently a mock that will be wired to the Rust 
-    // FFI in the upcoming BIP39 sprint.
-    return "mock_signed_tx_hex_for_v0.1.7"; 
+    // Mock implementation for v0.1.7 testing in Appetize.io
+    return "mock_signed_tx_hex_for_v0.1.7_success"; 
   }
 
   String signTransaction(String txData) {
