@@ -3,6 +3,11 @@ on:
   push:
     tags:
       - 'v*'
+
+# Grant the pipeline permission to create public releases
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,15 +21,13 @@ jobs:
       - name: CI Platform Generation & Handshake
         run: |
           cd flutter_app
-          # Ensure a totally blank slate on the server
           rm -rf android
-          # Natively generate a modern, V2-compliant platform
           flutter create --platforms=android --org com.reddcoin .
           
-          # --- NEW FIX: Bump minSdkVersion to 21 for mobile_scanner ---
+          # Bump minSdkVersion to 21 for mobile_scanner
           sed -i 's/minSdkVersion .*/minSdkVersion 21/g' android/app/build.gradle
           
-          # Inject the necessary Web3 permissions and legacy security handshake
+          # Inject Web3 permissions and legacy security handshake
           python3 -c "
           file_path = 'android/app/src/main/AndroidManifest.xml'
           with open(file_path, 'r') as f:
@@ -45,8 +48,12 @@ jobs:
           cd flutter_app
           flutter build apk --release
           
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: release-apk
-          path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          # This attaches the raw, unzipped APK directly to the release page
+          files: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          name: ReddMobile ${{ github.ref_name }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
