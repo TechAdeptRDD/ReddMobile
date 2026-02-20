@@ -1,4 +1,4 @@
-package com.redd.mobile.flutter_app
+package com.reddcoin.redd_mobile
 
 import io.flutter.embedding.android.FlutterActivity
 
