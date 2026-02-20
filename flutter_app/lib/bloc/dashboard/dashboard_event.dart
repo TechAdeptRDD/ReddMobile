@@ -1,11 +1,10 @@
-abstract class DashboardEvent {}
+import 'package:equatable/equatable.dart';
 
-class AcquireReddIDEvent extends DashboardEvent {
-  final String handle;
-  AcquireReddIDEvent(this.handle);
+abstract class DashboardEvent extends Equatable {
+  const DashboardEvent();
+  @override
+  List<Object> get props => [];
 }
 
-class BroadcastTransactionEvent extends DashboardEvent {
-  final String signedTxHex;
-  BroadcastTransactionEvent(this.signedTxHex);
-}
+class LoadDashboardData extends DashboardEvent {}
+class AcquireReddIDEvent extends DashboardEvent {}

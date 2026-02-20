@@ -73,11 +73,11 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         // Fetch Live Fiat Price (USD)
         double fiatPrice = 0.0;
         try {
-          final prefCurrency = await storage.getFiatPreference();
+          final preferredCurrency = await storage.getFiatPreference();
           final res = await http.get(Uri.parse(
-              "https://api.coingecko.com/api/v3/simple/price?ids=reddcoinfinal res = await http.get(Uri.parse('https://api.coingecko.com/api/v3/simple/price?ids=reddcoin&vs_currencies=usd'));vs_currencies=$prefCurrency"));
+              "https://api.coingecko.com/api/v3/simple/price?ids=reddcoinfinal res = await http.get(Uri.parse('https://api.coingecko.com/api/v3/simple/price?ids=reddcoin&vs_currencies=usd'));vs_currencies=$preferredCurrency"));
           if (res.statusCode == 200) {
-            fiatPrice = (json.decode(res.body)["reddcoin"][prefCurrency] as num)
+            fiatPrice = (json.decode(res.body)["reddcoin"][preferredCurrency] as num)
                 .toDouble();
           }
         } catch (_) {
@@ -86,7 +86,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
         final double totalFiat = balanceRdd * fiatPrice;
         String formattedFiat =
-            "${totalFiat.toStringAsFixed(2)} ${prefCurrency.toUpperCase()}";
+            "${totalFiat.toStringAsFixed(2)} ${preferredCurrency.toUpperCase()}";
 
         final List<dynamic> txs = data['transactions'] ?? [];
         emit(DashboardLoaded(address, formatted, formattedFiat, txs));

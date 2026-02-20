@@ -6,9 +6,7 @@ class BlockbookService {
 
   Future<dynamic> _reliableGet(String endpoint) async {
     final response = await http.get(Uri.parse('$baseUrl$endpoint'));
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    }
+    if (response.statusCode == 200) return json.decode(response.body);
     throw Exception('Failed to load data');
   }
 
@@ -21,7 +19,9 @@ class BlockbookService {
     }
   }
 
-  Future<double> getLivePrice() async {
-    return 0.0001; // Placeholder for CoinGecko API integration
-  }
+  Future<double> getLivePrice() async => 0.0001;
+  Future<Map<String, dynamic>> getAddressDetails(String address) async => {};
+  Future<List<dynamic>> getUtxos(String address) async => [];
+  Future<int> estimateFee({int inputs = 1, int outputs = 2}) async => 10000;
+  Future<String> broadcastTransaction(String hex) async => "txid_placeholder";
 }

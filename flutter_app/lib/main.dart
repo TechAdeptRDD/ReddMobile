@@ -120,7 +120,7 @@ class _MainNavigationState extends State<MainNavigation> {
         unselectedItemColor: Colors.grey,
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
+        items: [
           BottomNavigationBarItem(
               icon: Icon(Icons.person_search), label: "Identity"),
           BottomNavigationBarItem(
