@@ -51,7 +51,7 @@ class _DashboardPageState extends State<DashboardPage> {
               decoration: BoxDecoration(
                 gradient: const LinearGradient(colors: [Color(0xFF2A2A2A), Color(0xFF1A1A1A)]),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE31B23).withValues(alpha: 0.5), width: 1),
+                border: Border.all(color: const Color(0xFFE31B23).withOpacity(0.5), width: 1),
               ),
               child: Column(
                 children: [
@@ -95,7 +95,7 @@ class _DashboardPageState extends State<DashboardPage> {
       onTap: onTap,
       child: Column(
         children: [
-          CircleAvatar(backgroundColor: const Color(0xFFE31B23).withValues(alpha: 0.2), radius: 24, child: Icon(icon, color: const Color(0xFFE31B23))),
+          CircleAvatar(backgroundColor: const Color(0xFFE31B23).withOpacity(0.2), radius: 24, child: Icon(icon, color: const Color(0xFFE31B23))),
           const SizedBox(height: 8),
           Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
         ],
