@@ -35,29 +35,35 @@ class _ReddIDRegistrationPageState extends State<ReddIDRegistrationPage> {
   }
 
   Future<void> _pickImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 70, maxWidth: 400);
+    final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery, imageQuality: 70, maxWidth: 400);
     if (image != null) {
       setState(() => _selectedImage = File(image.path));
     }
   }
 
   Future<void> _registerIdentity() async {
-    final handle = _handleController.text.trim().toLowerCase().replaceAll('@', '');
+    final handle =
+        _handleController.text.trim().toLowerCase().replaceAll('@', '');
     if (handle.length < 3) {
       setState(() => _status = "Handle must be at least 3 characters.");
       return;
     }
 
-    setState(() { _isProcessing = true; _status = "Initializing Registration..."; });
+    setState(() {
+      _isProcessing = true;
+      _status = "Initializing Registration...";
+    });
 
     try {
       String cid = "";
-      
+
       // 1. Upload to IPFS natively if an image is selected
       if (_selectedImage != null) {
         setState(() => _status = "Pinning Avatar to IPFS Network...");
         final uploadedCid = await _ipfs.uploadAvatar(_selectedImage!);
-        if (uploadedCid == null) throw Exception("Failed to secure image on decentralized web.");
+        if (uploadedCid == null)
+          throw Exception("Failed to secure image on decentralized web.");
         cid = uploadedCid;
       }
 
@@ -65,19 +71,21 @@ class _ReddIDRegistrationPageState extends State<ReddIDRegistrationPage> {
       setState(() => _status = "Securing Identity on Blockchain...");
       final mnemonic = await _storage.getMnemonic();
       if (mnemonic == null) throw Exception("Wallet locked.");
-      
+
       final myAddress = _vault.deriveReddcoinAddress(mnemonic);
       final utxos = await _blockbook.getUtxos(myAddress);
-      if (utxos.isEmpty) throw Exception("No RDD available to pay network registration fee.");
+      if (utxos.isEmpty)
+        throw Exception("No RDD available to pay network registration fee.");
 
       final int estimatedFeeSats = await _blockbook.estimateFee();
-      utxos.sort((a, b) => int.parse(b['value'].toString()).compareTo(int.parse(a['value'].toString())));
-      
+      utxos.sort((a, b) => int.parse(b['value'].toString())
+          .compareTo(int.parse(a['value'].toString())));
+
       // We send 0 RDD to ourselves, just paying the network fee to embed the OP_RETURN
       final signedHex = _vault.signMultiInputTransaction(
-        privateKeyHex: mnemonic, 
+        privateKeyHex: mnemonic,
         utxos: [utxos[0]], // Simplification: grabbing largest UTXO for fee
-        destination: myAddress, 
+        destination: myAddress,
         amount: 0.0,
         changeAddress: myAddress,
         opReturnData: "RDD:ID:$handle:$cid",
@@ -89,10 +97,10 @@ class _ReddIDRegistrationPageState extends State<ReddIDRegistrationPage> {
       final txid = await _blockbook.broadcastTransaction(signedHex);
 
       setState(() {
-        _status = "Success! Welcome to the network, @$handle.\\nTXID: ${txid.substring(0, 10)}...";
+        _status =
+            "Success! Welcome to the network, @$handle.\\nTXID: ${txid.substring(0, 10)}...";
         _isProcessing = false;
       });
-
     } catch (e) {
       setState(() {
         _isProcessing = false;
@@ -105,15 +113,27 @@ class _ReddIDRegistrationPageState extends State<ReddIDRegistrationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F0F),
-      appBar: AppBar(title: const Text("Claim ReddID", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), backgroundColor: Colors.transparent, elevation: 0),
+      appBar: AppBar(
+          title: const Text("Claim ReddID",
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.transparent,
+          elevation: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Text("Your Web3 Identity", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+            const Text("Your Web3 Identity",
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            const Text("Upload an avatar and choose a handle. This will be permanently secured on the ReddCoin blockchain.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 14)),
+            const Text(
+                "Upload an avatar and choose a handle. This will be permanently secured on the ReddCoin blockchain.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 14)),
             const SizedBox(height: 40),
 
             // Native Image Picker Avatar
@@ -122,14 +142,20 @@ class _ReddIDRegistrationPageState extends State<ReddIDRegistrationPage> {
               child: CircleAvatar(
                 radius: 60,
                 backgroundColor: const Color(0xFF151515),
-                backgroundImage: _selectedImage != null ? FileImage(_selectedImage!) : null,
-                child: _selectedImage == null 
-                    ? const Icon(Icons.add_a_photo, color: Color(0xFFE31B23), size: 40)
+                backgroundImage:
+                    _selectedImage != null ? FileImage(_selectedImage!) : null,
+                child: _selectedImage == null
+                    ? const Icon(Icons.add_a_photo,
+                        color: Color(0xFFE31B23), size: 40)
                     : null,
               ),
             ),
             const SizedBox(height: 15),
-            const Text("Tap to select avatar", style: TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+            const Text("Tap to select avatar",
+                style: TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 40),
 
             TextField(
@@ -140,10 +166,15 @@ class _ReddIDRegistrationPageState extends State<ReddIDRegistrationPage> {
                 labelText: "Choose your @handle",
                 labelStyle: const TextStyle(color: Colors.grey),
                 prefixText: "@ ",
-                prefixStyle: const TextStyle(color: Color(0xFFE31B23), fontSize: 18, fontWeight: FontWeight.bold),
+                prefixStyle: const TextStyle(
+                    color: Color(0xFFE31B23),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.05),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide.none),
               ),
             ),
             const SizedBox(height: 30),
@@ -151,17 +182,32 @@ class _ReddIDRegistrationPageState extends State<ReddIDRegistrationPage> {
             if (_status.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 20),
-                child: Text(_status, textAlign: TextAlign.center, style: TextStyle(color: _status.contains("Error") ? Colors.redAccent : Colors.greenAccent, fontSize: 14, fontWeight: FontWeight.bold)),
+                child: Text(_status,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: _status.contains("Error")
+                            ? Colors.redAccent
+                            : Colors.greenAccent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold)),
               ),
 
             SizedBox(
-              width: double.infinity, height: 55,
+              width: double.infinity,
+              height: 55,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE31B23), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE31B23),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15))),
                 onPressed: _isProcessing ? null : _registerIdentity,
-                child: _isProcessing 
-                    ? const CircularProgressIndicator(color: Colors.white) 
-                    : const Text("REGISTER IDENTITY", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                child: _isProcessing
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text("REGISTER IDENTITY",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16)),
               ),
             ),
           ],

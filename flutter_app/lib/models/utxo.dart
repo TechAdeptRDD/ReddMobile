@@ -10,10 +10,10 @@ class Utxo {
   });
 
   Map<String, dynamic> toJson() => {
-    'txid': txid,
-    'vout': vout,
-    'amount': amount,
-  };
+        'txid': txid,
+        'vout': vout,
+        'amount': amount,
+      };
 
   factory Utxo.fromJson(Map<String, dynamic> json) {
     return Utxo(

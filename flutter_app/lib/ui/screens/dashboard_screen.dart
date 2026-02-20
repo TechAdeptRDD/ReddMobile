@@ -173,7 +173,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             child: SizedBox(
                               width: 24,
                               height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2.2),
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 2.2),
                             ),
                           )
                         else if (state is ReddIDPayloadGenerated)

@@ -9,16 +9,18 @@ class IpfsService {
 
   Future<String?> uploadAvatar(File imageFile) async {
     try {
-      var request = http.MultipartRequest("POST", Uri.parse("https://api.pinata.cloud/pinning/pinFileToIPFS"));
-      
+      var request = http.MultipartRequest(
+          "POST", Uri.parse("https://api.pinata.cloud/pinning/pinFileToIPFS"));
+
       request.headers.addAll({
         "Authorization": "Bearer $_pinataJwt",
       });
-      
-      request.files.add(await http.MultipartFile.fromPath("file", imageFile.path));
-      
+
+      request.files
+          .add(await http.MultipartFile.fromPath("file", imageFile.path));
+
       var response = await request.send();
-      
+
       if (response.statusCode == 200) {
         var responseData = await response.stream.bytesToString();
         var json = jsonDecode(responseData);

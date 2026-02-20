@@ -30,7 +30,9 @@ class ReddMobileApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<DashboardBloc>(create: (context) => DashboardBloc()),
-        BlocProvider<ActivityBloc>(create: (context) => ActivityBloc(blockbookService: blockbookService)),
+        BlocProvider<ActivityBloc>(
+            create: (context) =>
+                ActivityBloc(blockbookService: blockbookService)),
       ],
       child: MaterialApp(
         title: 'ReddMobile',
@@ -43,12 +45,15 @@ class ReddMobileApp extends StatelessWidget {
           future: storage.getMnemonic(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFE31B23))));
+              return const Scaffold(
+                  body: Center(
+                      child:
+                          CircularProgressIndicator(color: Color(0xFFE31B23))));
             }
             if (snapshot.hasData && snapshot.data != null) {
-              return const LockPage(); 
+              return const LockPage();
             }
-            return const WelcomePage(); 
+            return const WelcomePage();
           },
         ),
       ),
@@ -58,18 +63,19 @@ class ReddMobileApp extends StatelessWidget {
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
-  @override State<MainNavigation> createState() => _MainNavigationState();
+  @override
+  State<MainNavigation> createState() => _MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int _currentIndex = 1; 
+  int _currentIndex = 1;
   late AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
 
   final List<Widget> _pages = [
-    const SocialPage(),   
+    const SocialPage(),
     const DashboardPage(),
-    const ActivityPage(), 
+    const ActivityPage(),
     const SettingsPage(),
   ];
 
@@ -81,7 +87,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   void _initDeepLinks() {
     _appLinks = AppLinks();
-    
+
     // Listen for incoming deep links (e.g., redd://pay?user=@john)
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
       if (uri.scheme == 'redd' && uri.host == 'pay') {
@@ -115,12 +121,15 @@ class _MainNavigationState extends State<MainNavigation> {
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.person_search), label: "Identity"),
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Wallet"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_search), label: "Identity"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.account_balance_wallet), label: "Wallet"),
           BottomNavigationBarItem(
             icon: BlocBuilder<ActivityBloc, ActivityState>(
               builder: (context, state) {
-                bool hasActivity = state is ActivityLoaded && state.transactions.isNotEmpty;
+                bool hasActivity =
+                    state is ActivityLoaded && state.transactions.isNotEmpty;
                 return Badge(
                   isLabelVisible: hasActivity && _currentIndex != 2,
                   backgroundColor: const Color(0xFFE31B23),
@@ -130,7 +139,8 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
             label: "Global",
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings), label: "Settings"),
         ],
       ),
     );

@@ -7,26 +7,42 @@ import '../../services/secure_storage_service.dart';
 import '../../services/vault_crypto_service.dart';
 
 // --- Events ---
-abstract class DashboardEvent extends Equatable { const DashboardEvent(); @override List<Object> get props => []; }
+abstract class DashboardEvent extends Equatable {
+  const DashboardEvent();
+  @override
+  List<Object> get props => [];
+}
+
 class LoadDashboardData extends DashboardEvent {}
 
 // --- States ---
-abstract class DashboardState extends Equatable { const DashboardState(); @override List<Object> get props => []; }
+abstract class DashboardState extends Equatable {
+  const DashboardState();
+  @override
+  List<Object> get props => [];
+}
+
 class DashboardInitial extends DashboardState {}
+
 class DashboardLoading extends DashboardState {}
+
 class DashboardLoaded extends DashboardState {
   final String address;
   final String formattedBalance;
   final String fiatValue;
   final List<dynamic> history;
-  
-  const DashboardLoaded(this.address, this.formattedBalance, this.fiatValue, this.history);
-  @override List<Object> get props => [address, formattedBalance, fiatValue, history];
+
+  const DashboardLoaded(
+      this.address, this.formattedBalance, this.fiatValue, this.history);
+  @override
+  List<Object> get props => [address, formattedBalance, fiatValue, history];
 }
+
 class DashboardError extends DashboardState {
   final String message;
   const DashboardError(this.message);
-  @override List<Object> get props => [message];
+  @override
+  List<Object> get props => [message];
 }
 
 // --- Bloc ---
@@ -40,27 +56,37 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       emit(DashboardLoading());
       try {
         final mnemonic = await storage.getMnemonic();
-        if (mnemonic == null) { emit(const DashboardError("Wallet not found.")); return; }
+        if (mnemonic == null) {
+          emit(const DashboardError("Wallet not found."));
+          return;
+        }
         final address = vault.deriveReddcoinAddress(mnemonic);
-        
+
         final data = await blockbook.getAddressDetails(address);
-        final balanceSats = int.parse(data['balance'] ?? '0') + int.parse(data['unconfirmedBalance'] ?? '0');
+        final balanceSats = int.parse(data['balance'] ?? '0') +
+            int.parse(data['unconfirmedBalance'] ?? '0');
         final balanceRdd = balanceSats / 100000000;
-        
-        String formatted = balanceRdd.toStringAsFixed(2).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
+
+        String formatted = balanceRdd.toStringAsFixed(2).replaceAllMapped(
+            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
 
         // Fetch Live Fiat Price (USD)
         double fiatPrice = 0.0;
         try {
           final prefCurrency = await storage.getFiatPreference();
-          final res = await http.get(Uri.parse("https://api.coingecko.com/api/v3/simple/price?ids=reddcoinfinal res = await http.get(Uri.parse('https://api.coingecko.com/api/v3/simple/price?ids=reddcoin&vs_currencies=usd'));vs_currencies=$prefCurrency"));
+          final res = await http.get(Uri.parse(
+              "https://api.coingecko.com/api/v3/simple/price?ids=reddcoinfinal res = await http.get(Uri.parse('https://api.coingecko.com/api/v3/simple/price?ids=reddcoin&vs_currencies=usd'));vs_currencies=$prefCurrency"));
           if (res.statusCode == 200) {
-            fiatPrice = (json.decode(res.body)["reddcoin"][prefCurrency] as num).toDouble();
+            fiatPrice = (json.decode(res.body)["reddcoin"][prefCurrency] as num)
+                .toDouble();
           }
-        } catch (_) { /* Silently fail fiat fetch to keep core wallet functional */ }
-        
+        } catch (_) {
+          /* Silently fail fiat fetch to keep core wallet functional */
+        }
+
         final double totalFiat = balanceRdd * fiatPrice;
-        String formattedFiat = "${totalFiat.toStringAsFixed(2)} ${prefCurrency.toUpperCase()}";
+        String formattedFiat =
+            "${totalFiat.toStringAsFixed(2)} ${prefCurrency.toUpperCase()}";
 
         final List<dynamic> txs = data['transactions'] ?? [];
         emit(DashboardLoaded(address, formatted, formattedFiat, txs));

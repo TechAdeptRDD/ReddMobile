@@ -26,9 +26,12 @@ class _MainShellState extends State<MainShell> {
         unselectedItemColor: Colors.white54,
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
-          BottomNavigationBarItem(icon: Icon(Icons.alternate_email), label: 'ReddID'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.alternate_email), label: 'ReddID'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
     );

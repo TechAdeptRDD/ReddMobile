@@ -3,10 +3,10 @@ import 'package:http/http.dart' as http;
 
 class ReddIDService {
   final String _baseUrl = "https://blockbook.reddcoin.com/api/v2";
-  
+
   // This is the known address where ReddID registrations are indexed
   // For the prototype, we scan recent transactions with OP_RETURN data
-  final String _indexAddress = "Ru6sB6S79Z86V99Xy3S6sB6S79Z86V99Xy3"; 
+  final String _indexAddress = "Ru6sB6S79Z86V99Xy3S6sB6S79Z86V99Xy3";
 
   Future<bool> isUsernameAvailable(String username) async {
     try {
@@ -26,7 +26,8 @@ class ReddIDService {
           // Scan OP_RETURN outputs in the history
           for (var vout in tx['vout']) {
             final String asm = vout['scriptPubKey']['asm'] ?? "";
-            if (asm.contains("OP_RETURN") && asm.contains(hexEncode("RDD:ID:$cleanName"))) {
+            if (asm.contains("OP_RETURN") &&
+                asm.contains(hexEncode("RDD:ID:$cleanName"))) {
               return false; // Found a match, name is taken
             }
           }
@@ -40,6 +41,9 @@ class ReddIDService {
   }
 
   String hexEncode(String input) {
-    return utf8.encode(input).map((e) => e.toRadixString(16).padLeft(2, '0')).join();
+    return utf8
+        .encode(input)
+        .map((e) => e.toRadixString(16).padLeft(2, '0'))
+        .join();
   }
 }

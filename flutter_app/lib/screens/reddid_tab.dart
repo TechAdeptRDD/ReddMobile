@@ -10,31 +10,38 @@ class ReddIDTab extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text("ReddID Social", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("ReddID Social",
+            style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Search & Claim Identities", style: TextStyle(color: Colors.white70, fontSize: 16)),
+            const Text("Search & Claim Identities",
+                style: TextStyle(color: Colors.white70, fontSize: 16)),
             const SizedBox(height: 20),
             TextField(
               decoration: InputDecoration(
                 hintText: "Search handle (e.g. techadept)",
-                prefixIcon: const Icon(Icons.alternate_email, color: Color(0xFFE31B23)),
+                prefixIcon:
+                    const Icon(Icons.alternate_email, color: Color(0xFFE31B23)),
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.05),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide.none),
               ),
             ),
             const SizedBox(height: 40),
             Center(
               child: Column(
                 children: [
-                  Icon(Icons.hub, size: 80, color: Colors.white.withOpacity(0.1)),
+                  Icon(Icons.hub,
+                      size: 80, color: Colors.white.withOpacity(0.1)),
                   const SizedBox(height: 20),
-                  const Text("ReddID registration coming in Phase 2", style: TextStyle(color: Colors.grey)),
+                  const Text("ReddID registration coming in Phase 2",
+                      style: TextStyle(color: Colors.grey)),
                 ],
               ),
             )

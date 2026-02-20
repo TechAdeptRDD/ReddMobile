@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 /// PulseService: The social and technical heartbeat of ReddMobile.
-/// 
+///
 /// This service decodes OP_RETURN metadata from the Reddcoin blockchain.
 /// RDD Specs (2026):
 /// - OP_RETURN Limit: 80 bytes.
@@ -17,12 +17,14 @@ class PulseService {
       List<int> bytes = [];
       for (int i = 0; i < hexData.length; i += 2) {
         int byte = int.parse(hexData.substring(i, i + 2), radix: 16);
-        // Empathy Filter: Only allow printable characters (32-126) 
+        // Empathy Filter: Only allow printable characters (32-126)
         // to prevent UI corruption from binary payloads.
         if (byte >= 32 && byte <= 126) bytes.add(byte);
       }
       return utf8.decode(bytes);
-    } catch (_) { return "Encrypted or Binary Payload"; }
+    } catch (_) {
+      return "Encrypted or Binary Payload";
+    }
   }
 
   Future<List<Map<String, String>>> getGlobalPulse() async {
@@ -36,7 +38,8 @@ class PulseService {
             if (out["asm"] != null && out["asm"].startsWith("OP_RETURN")) {
               String hex = out["asm"].replaceAll("OP_RETURN ", "");
               String message = _decodeSocialMessage(hex);
-              if (message.isNotEmpty && message != "Encrypted or Binary Payload") {
+              if (message.isNotEmpty &&
+                  message != "Encrypted or Binary Payload") {
                 pulses.add({
                   "txid": tx["txid"],
                   "message": message,
@@ -48,7 +51,9 @@ class PulseService {
         }
         return pulses;
       }
-    } catch (e) { print("RDD Pulse Error: $e"); }
+    } catch (e) {
+      print("RDD Pulse Error: $e");
+    }
     return [];
   }
 }

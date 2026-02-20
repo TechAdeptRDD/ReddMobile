@@ -31,7 +31,7 @@ class _WalletTabState extends State<WalletTab> {
   Future<void> _initializeWallet() async {
     final storage = SecureStorageService();
     final vault = VaultCryptoService();
-    
+
     final mnemonic = await storage.getMnemonic();
     if (mnemonic != null && mnemonic.isNotEmpty) {
       final address = vault.deriveReddcoinAddress(mnemonic);
@@ -54,7 +54,8 @@ class _WalletTabState extends State<WalletTab> {
     if (mounted) {
       setState(() {
         // Blockbook returns balance in base units (10^8)
-        _balanceRdd = (double.tryParse(details['balance'] ?? '0') ?? 0) / 100000000;
+        _balanceRdd =
+            (double.tryParse(details['balance'] ?? '0') ?? 0) / 100000000;
         _fiatValueUsd = _balanceRdd * price;
         _transactions = details['transactions'] ?? [];
         _isLoading = false;
@@ -72,13 +73,12 @@ class _WalletTabState extends State<WalletTab> {
         title: Image.asset('assets/branding/redd_logo_dark.png', height: 28),
         actions: [
           IconButton(
-            icon: const Icon(Icons.send, color: Color(0xFFE31B23)), 
+            icon: const Icon(Icons.send, color: Color(0xFFE31B23)),
             onPressed: () => showModalBottomSheet(
-                context: context, 
-                isScrollControlled: true, 
-                backgroundColor: Colors.transparent, 
-                builder: (context) => const SendDialog()
-            ),
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => const SendDialog()),
           ),
         ],
       ),
@@ -94,44 +94,54 @@ class _WalletTabState extends State<WalletTab> {
                 children: [
                   const SizedBox(height: 20),
                   // Live Balance
-                  _isLoading 
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20.0),
-                        child: CircularProgressIndicator(color: Color(0xFFE31B23)),
-                      )
-                    : Column(
-                        children: [
-                          Text(
-                            "${_balanceRdd.toStringAsFixed(2)} RDD", 
-                            style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold, color: Colors.white)
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "\$${_fiatValueUsd.toStringAsFixed(4)} USD", 
-                            style: const TextStyle(fontSize: 16, color: Colors.greenAccent)
-                          ),
-                        ],
-                      ),
+                  _isLoading
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20.0),
+                          child: CircularProgressIndicator(
+                              color: Color(0xFFE31B23)),
+                        )
+                      : Column(
+                          children: [
+                            Text("${_balanceRdd.toStringAsFixed(2)} RDD",
+                                style: const TextStyle(
+                                    fontSize: 42,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white)),
+                            const SizedBox(height: 8),
+                            Text("\$${_fiatValueUsd.toStringAsFixed(4)} USD",
+                                style: const TextStyle(
+                                    fontSize: 16, color: Colors.greenAccent)),
+                          ],
+                        ),
                   const SizedBox(height: 20),
-                  
+
                   // Address Display Pill
                   GestureDetector(
                     onTap: () {
                       Clipboard.setData(ClipboardData(text: _reddcoinAddress));
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Address copied!")));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Address copied!")));
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(20)),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.qr_code_2, color: Colors.grey, size: 16),
+                          const Icon(Icons.qr_code_2,
+                              color: Colors.grey, size: 16),
                           const SizedBox(width: 8),
                           Text(
-                            _reddcoinAddress.length > 15 ? "${_reddcoinAddress.substring(0, 8)}...${_reddcoinAddress.substring(_reddcoinAddress.length - 8)}" : _reddcoinAddress, 
-                            style: const TextStyle(color: Colors.white70, fontSize: 14, letterSpacing: 1)
-                          ),
+                              _reddcoinAddress.length > 15
+                                  ? "${_reddcoinAddress.substring(0, 8)}...${_reddcoinAddress.substring(_reddcoinAddress.length - 8)}"
+                                  : _reddcoinAddress,
+                              style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                  letterSpacing: 1)),
                           const SizedBox(width: 8),
                           const Icon(Icons.copy, color: Colors.grey, size: 14),
                         ],
@@ -143,12 +153,16 @@ class _WalletTabState extends State<WalletTab> {
                 ],
               ),
             ),
-            
+
             // Dynamic Activity Feed
             SliverFillRemaining(
-              child: _isLoading 
-                  ? const Center(child: Text("Syncing network...", style: TextStyle(color: Colors.grey)))
-                  : ActivityFeed(transactions: _transactions, currentAddress: _reddcoinAddress),
+              child: _isLoading
+                  ? const Center(
+                      child: Text("Syncing network...",
+                          style: TextStyle(color: Colors.grey)))
+                  : ActivityFeed(
+                      transactions: _transactions,
+                      currentAddress: _reddcoinAddress),
             ),
           ],
         ),

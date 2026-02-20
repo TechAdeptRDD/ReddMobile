@@ -83,11 +83,11 @@ class OnboardingScreen extends StatelessWidget {
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               labelText: '@handle',
-                              labelStyle:
-                                  TextStyle(color: Colors.white.withOpacity(0.7)),
+                              labelStyle: TextStyle(
+                                  color: Colors.white.withOpacity(0.7)),
                               hintText: 'yourname',
-                              hintStyle:
-                                  TextStyle(color: Colors.white.withOpacity(0.45)),
+                              hintStyle: TextStyle(
+                                  color: Colors.white.withOpacity(0.45)),
                               filled: true,
                               fillColor: const Color(0xFF0F131A),
                               border: OutlineInputBorder(
