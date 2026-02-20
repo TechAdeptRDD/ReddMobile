@@ -12,14 +12,35 @@ jobs:
         with:
           flutter-version: '3.19.0'
           channel: 'stable'
+          
+      - name: CI Platform Generation & Handshake
+        run: |
+          cd flutter_app
+          # Ensure a totally blank slate on the server
+          rm -rf android
+          # Natively generate a modern, V2-compliant platform
+          flutter create --platforms=android --org com.reddcoin .
+          # Inject the necessary Web3 permissions and legacy security handshake
+          python3 -c "
+          file_path = 'android/app/src/main/AndroidManifest.xml'
+          with open(file_path, 'r') as f:
+              c = f.read()
+          c = c.replace('<application', '<uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.CAMERA\"/>\n    <application')
+          c = c.replace('<activity', '<meta-data android:name=\"flutterEmbedding\" android:value=\"2\" />\n        <activity')
+          with open(file_path, 'w') as f:
+              f.write(c)
+          "
+          
       - name: Install Dependencies
         run: |
           cd flutter_app
           flutter pub get
+          
       - name: Build APK
         run: |
           cd flutter_app
           flutter build apk --release
+          
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
