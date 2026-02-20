@@ -7,6 +7,8 @@ environment:
   sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
+  app_links: ^3.4.0
+  equatable: ^2.0.5
   flutter_secure_storage: ^9.2.4
   flutter:
     sdk: flutter
@@ -25,6 +27,8 @@ dependencies:
   qr_flutter: 4.1.0
 
 dev_dependencies:
+  app_links: ^3.4.0
+  equatable: ^2.0.5
   flutter_secure_storage: ^9.2.4
   flutter_test:
     sdk: flutter
