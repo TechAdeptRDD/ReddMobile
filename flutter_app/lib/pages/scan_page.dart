@@ -45,7 +45,7 @@ class _ScanPageState extends State<ScanPage> {
         children: [
           MobileScanner(
             onDetect: _onDetect,
-            overlay: QRScannerOverlayShape(borderColor: const Color(0xFFE31B23), borderRadius: 10, borderLength: 30, borderWidth: 10, cutOutSize: 250),
+             borderRadius: 10, borderLength: 30, borderWidth: 10, cutOutSize: 250),
           ),
           const Positioned(bottom: 50, child: Text("Align QR code within the frame", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
         ],

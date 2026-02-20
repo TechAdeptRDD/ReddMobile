@@ -201,19 +201,19 @@ class _SendDialogState extends State<SendDialog> {
                             avatar: _contacts[index]["cid"] != "" 
                                 ? CircleAvatar(backgroundImage: NetworkImage("https://gateway.pinata.cloud/ipfs/${_contacts[index]["cid"]}"))
                                 : const CircleAvatar(backgroundColor: Colors.white10, child: Icon(Icons.person, size: 12, color: Colors.white)),
-                            label: Text("@${_contacts[index]["handle"]}", style: const TextStyle(color: Colors.white)),
+                            child: Text("@${_contacts[index]["handle"]}", style: const TextStyle(color: Colors.white)),
                             onPressed: () {
                               _addressController.text = "@${_contacts[index]["handle"]}";
                               _onAddressChanged();
                             },
                           ),
-                            label: Text("@${_contacts[index]}", style: const TextStyle(color: Colors.white)),
+                            child: Text("@${_contacts[index]}", style: const TextStyle(color: Colors.white)),
                             onPressed: () {
                               _addressController.text = "@${_contacts[index]}";
                               _onAddressChanged();
                             },
                           ),
-                        );
+                        ),
                       },
                     ),
                   ),
@@ -336,7 +336,7 @@ class _SendDialogState extends State<SendDialog> {
     return ActionChip(
       backgroundColor: Colors.black26,
       side: const BorderSide(color: Colors.grey, width: 1),
-      label: Text(label, style: const TextStyle(color: Colors.white)),
+      child: Text(label, style: const TextStyle(color: Colors.white)),
       onPressed: () => _setSmartTip(amount, label),
     );
   }
