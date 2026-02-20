@@ -20,6 +20,10 @@ jobs:
           rm -rf android
           # Natively generate a modern, V2-compliant platform
           flutter create --platforms=android --org com.reddcoin .
+          
+          # --- NEW FIX: Bump minSdkVersion to 21 for mobile_scanner ---
+          sed -i 's/minSdkVersion .*/minSdkVersion 21/g' android/app/build.gradle
+          
           # Inject the necessary Web3 permissions and legacy security handshake
           python3 -c "
           file_path = 'android/app/src/main/AndroidManifest.xml'
