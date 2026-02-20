@@ -4,7 +4,6 @@ on:
     tags:
       - 'v*'
 
-# Grant the pipeline permission to create public releases
 permissions:
   contents: write
 
@@ -13,6 +12,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      # --- NEW: Install Rust and Android Targets ---
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
+          
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      # --- NEW: Compile Rust to Android .so libraries ---
+      - name: Build Rust Core for Android
+        run: |
+          cd rust_core
+          # This compiles the Rust code and outputs it directly into the Flutter Android jniLibs folder
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -o ../flutter_app/android/app/src/main/jniLibs build --release
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.0'
@@ -38,6 +54,10 @@ jobs:
               f.write(c)
           "
           
+          # Move the compiled Rust libraries into the freshly generated Android folder
+          mkdir -p android/app/src/main/jniLibs
+          cp -r ../rust_core/target/aarch64-linux-android/release/librust_core.so android/app/src/main/jniLibs/arm64-v8a/ || true
+          
       - name: Install Dependencies
         run: |
           cd flutter_app
@@ -51,7 +71,6 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          # This attaches the raw, unzipped APK directly to the release page
           files: flutter_app/build/app/outputs/flutter-apk/app-release.apk
           name: ReddMobile ${{ github.ref_name }}
           generate_release_notes: true
