@@ -86,7 +86,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
         final double totalFiat = balanceRdd * fiatPrice;
         String formattedFiat =
-            "${totalFiat.toStringAsFixed(2)} ${preferredCurrency.toUpperCase()}";
+            "${totalFiat.toStringAsFixed(2)} ${"USD"}";
 
         final List<dynamic> txs = data['transactions'] ?? [];
         emit(DashboardLoaded(address, formatted, formattedFiat, txs));

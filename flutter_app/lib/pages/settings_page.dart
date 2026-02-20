@@ -43,7 +43,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mnemonic == null) return;
 
     final address = _vault.deriveReddcoinAddress(mnemonic);
-    final signature = _vault.generateSocialSignature(platform);
+    final signature = _vault.generateSocialSignature("ReddID Link", platform);
 
     if (mounted) {
       showDialog(
