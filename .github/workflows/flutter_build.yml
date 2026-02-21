@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@6a3d8ea4d1fdbfb46b87116c4cca26e203f2486f # v2.16.0
+        uses: subosito/flutter-action@v2 # v2.16.0
         with:
           flutter-version: '3.22.3'
           channel: stable
@@ -96,7 +96,7 @@ jobs:
             -o ../flutter_app/android/app/src/main/jniLibs build --release
 
       - name: Setup Flutter
-        uses: subosito/flutter-action@6a3d8ea4d1fdbfb46b87116c4cca26e203f2486f # v2.16.0
+        uses: subosito/flutter-action@v2 # v2.16.0
         with:
           flutter-version: '3.22.3'
           channel: stable
