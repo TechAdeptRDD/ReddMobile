@@ -42,6 +42,41 @@ class _ReddIDRegistrationPageState extends State<ReddIDRegistrationPage> {
     }
   }
 
+
+  List<Map<String, dynamic>> _selectUtxosForFee(
+    List<dynamic> rawUtxos,
+    int estimatedFeeSats,
+  ) {
+    final normalized = rawUtxos
+        .whereType<Map<String, dynamic>>()
+        .map((utxo) => Map<String, dynamic>.from(utxo))
+        .toList();
+
+    normalized.sort((a, b) {
+      final aValue = int.tryParse('${a['value'] ?? a['amount'] ?? 0}') ?? 0;
+      final bValue = int.tryParse('${b['value'] ?? b['amount'] ?? 0}') ?? 0;
+      return bValue.compareTo(aValue);
+    });
+
+    final selected = <Map<String, dynamic>>[];
+    var total = 0;
+
+    for (final utxo in normalized) {
+      final value = int.tryParse('${utxo['value'] ?? utxo['amount'] ?? 0}') ?? 0;
+      if (value <= 0) continue;
+
+      selected.add(utxo);
+      total += value;
+
+      final dynamicFee = estimatedFeeSats + ((selected.length - 1) * 148);
+      if (total >= dynamicFee) {
+        return selected;
+      }
+    }
+
+    throw Exception('Insufficient confirmed funds for network fee.');
+  }
+
   Future<void> _registerIdentity() async {
     final handle =
         _handleController.text.trim().toLowerCase().replaceAll('@', '');
@@ -78,13 +113,12 @@ class _ReddIDRegistrationPageState extends State<ReddIDRegistrationPage> {
         throw Exception("No RDD available to pay network registration fee.");
 
       final int estimatedFeeSats = await _blockbook.estimateFee();
-      utxos.sort((a, b) => int.parse(b['value'].toString())
-          .compareTo(int.parse(a['value'].toString())));
+      final selectedUtxos = _selectUtxosForFee(utxos, estimatedFeeSats);
 
-      // We send 0 RDD to ourselves, just paying the network fee to embed the OP_RETURN
+      // We send 0 RDD to ourselves, just paying the network fee to embed the OP_RETURN.
       final signedHex = _vault.signMultiInputTransaction(
         privateKeyHex: mnemonic,
-        utxos: [utxos[0]], // Simplification: grabbing largest UTXO for fee
+        utxos: selectedUtxos,
         destination: myAddress,
         amount: 0.0,
         changeAddress: myAddress,

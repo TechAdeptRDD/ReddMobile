@@ -13,6 +13,8 @@ class BlockbookService {
   static const Duration _baseRetryDelay = Duration(milliseconds: 400);
   static const Duration _networkInfoTtl = Duration(minutes: 5);
   static const Duration _addressCacheTtl = Duration(minutes: 2);
+  static const int _fallbackFeePerKbSats = 10000;
+  static const int _satsPerCoin = 100000000;
 
   final http.Client _client;
   final SecureStorageService _storage;
@@ -167,34 +169,75 @@ class BlockbookService {
 
   Future<int> estimateFee({int inputs = 1, int outputs = 2}) async {
     final data = await _reliableGet('/api/v2/estimatefee/1');
-    final feePerKb = (data is Map<String, dynamic>) ? int.tryParse('${data['result'] ?? ''}') : null;
-    if (feePerKb == null) return 10000;
+    final feePerKb = (data is Map<String, dynamic>) ? _parseFeePerKbSats(data['result']) : null;
+    final normalizedFeePerKb = feePerKb ?? _fallbackFeePerKbSats;
 
     final txSizeBytes = (inputs * 148) + (outputs * 34) + 10;
-    return ((feePerKb / 1000) * txSizeBytes).ceil();
+    return ((normalizedFeePerKb * txSizeBytes) / 1000).ceil();
+  }
+
+  int? _parseFeePerKbSats(dynamic rawFee) {
+    if (rawFee is num) {
+      if (rawFee <= 0) return null;
+
+      if (rawFee >= 1) {
+        return rawFee.toInt();
+      }
+
+      return (rawFee * _satsPerCoin).ceil();
+    }
+
+    if (rawFee is! String || rawFee.trim().isEmpty) return null;
+
+    final trimmed = rawFee.trim();
+    final asInt = int.tryParse(trimmed);
+    if (asInt != null && asInt > 0) {
+      return asInt;
+    }
+
+    final asDouble = double.tryParse(trimmed);
+    if (asDouble != null && asDouble > 0) {
+      return asDouble >= 1 ? asDouble.toInt() : (asDouble * _satsPerCoin).ceil();
+    }
+
+    return null;
   }
 
   Future<String> broadcastTransaction(String hex) async {
-    try {
-      final response = await _client
-          .post(
-            _buildUri('/api/v2/sendtx/'),
-            headers: const {'Content-Type': 'application/json', 'Accept': 'application/json'},
-            body: json.encode({'hex': hex}),
-          )
-          .timeout(_timeout);
+    final response = await _client
+        .post(
+          _buildUri('/api/v2/sendtx/'),
+          headers: const {'Content-Type': 'application/json', 'Accept': 'application/json'},
+          body: json.encode({'hex': hex}),
+        )
+        .timeout(_timeout);
 
-      if (response.statusCode != 200 || response.bodyBytes.isEmpty) return 'txid_placeholder';
-
-      final decoded = json.decode(utf8.decode(response.bodyBytes));
-      if (decoded is Map<String, dynamic> && decoded['result'] is String) {
-        return decoded['result'] as String;
-      }
-    } on Exception {
-      // no-op fallback
+    if (response.bodyBytes.isEmpty) {
+      throw const FormatException('Broadcast rejected: empty node response.');
     }
 
-    return 'txid_placeholder';
+    final decoded = json.decode(utf8.decode(response.bodyBytes));
+    if (response.statusCode != 200) {
+      throw Exception('Broadcast failed (${response.statusCode}): ${_extractNodeError(decoded)}');
+    }
+
+    if (decoded is Map<String, dynamic> && decoded['result'] is String) {
+      return decoded['result'] as String;
+    }
+
+    throw Exception('Broadcast failed: malformed response body.');
+  }
+
+  String _extractNodeError(dynamic decoded) {
+    if (decoded is Map<String, dynamic>) {
+      final error = decoded['error'];
+      if (error is String && error.isNotEmpty) return error;
+      if (error is Map<String, dynamic>) {
+        final message = error['message'];
+        if (message is String && message.isNotEmpty) return message;
+      }
+    }
+    return 'Unknown node error';
   }
 
   void dispose() {

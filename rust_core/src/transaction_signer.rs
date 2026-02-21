@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bitcoin::absolute::LockTime;
-use bitcoin::consensus::encode::{serialize, serialize_hex};
+use bitcoin::consensus::encode::serialize_hex;
 use bitcoin::hashes::{hash160, Hash};
 use bitcoin::script::{Builder, PushBytesBuf};
 use bitcoin::sighash::{EcdsaSighashType, SighashCache};
@@ -18,6 +18,24 @@ use serde::Deserialize;
 /// We keep this explicit because the bitcoin crate models Bitcoin-family networks,
 /// so we need to consciously document and handle this divergence.
 pub const REDDCOIN_VERSION_BYTE: u8 = 0x3D;
+const LEGACY_BASE_TX_SIZE: u64 = 10;
+const LEGACY_P2PKH_INPUT_SIZE: u64 = 148;
+const LEGACY_OUTPUT_SIZE: u64 = 34;
+const LEGACY_P2PKH_DUST_LIMIT: u64 = 546;
+
+fn estimate_legacy_tx_fee(inputs: usize, outputs: usize, fee_per_kb: u64) -> Result<u64, String> {
+    let tx_size = LEGACY_BASE_TX_SIZE
+        .checked_add((inputs as u64).saturating_mul(LEGACY_P2PKH_INPUT_SIZE))
+        .and_then(|v| v.checked_add((outputs as u64).saturating_mul(LEGACY_OUTPUT_SIZE)))
+        .ok_or_else(|| "fee calculation overflowed tx size".to_string())?;
+
+    let fee_numerator = tx_size
+        .checked_mul(fee_per_kb)
+        .and_then(|v| v.checked_add(999))
+        .ok_or_else(|| "fee calculation overflowed u64".to_string())?;
+
+    Ok(fee_numerator / 1000)
+}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Utxo {
@@ -114,14 +132,9 @@ pub fn sign_opreturn_transaction(
         ],
     };
 
-    let estimated_size = serialize(&tx).len() as u64;
-    let fee_numerator = estimated_size
-        .checked_mul(fee_per_kb)
-        .and_then(|v| v.checked_add(999))
-        .ok_or_else(|| "fee calculation overflowed u64".to_string())?;
-    let absolute_fee = fee_numerator / 1000;
+    let mut absolute_fee = estimate_legacy_tx_fee(tx.input.len(), tx.output.len(), fee_per_kb)?;
 
-    let required_amount = op_return_cost
+    let mut required_amount = op_return_cost
         .checked_add(absolute_fee)
         .ok_or_else(|| "required amount overflowed u64".to_string())?;
 
@@ -131,7 +144,18 @@ pub fn sign_opreturn_transaction(
         ));
     }
 
-    tx.output[1].value = Amount::from_sat(total_input_amount - required_amount);
+    let mut change_value = total_input_amount - required_amount;
+    if change_value > 0 && change_value < LEGACY_P2PKH_DUST_LIMIT {
+        absolute_fee = absolute_fee
+            .checked_add(change_value)
+            .ok_or_else(|| "fee calculation overflowed dust adjustment".to_string())?;
+        required_amount = op_return_cost
+            .checked_add(absolute_fee)
+            .ok_or_else(|| "required amount overflowed dust adjustment".to_string())?;
+        change_value = 0;
+    }
+
+    tx.output[1].value = Amount::from_sat(change_value);
 
     let pubkey_hash = hash160::Hash::hash(&bitcoin_pubkey.inner.serialize());
     let p2pkh_script = Builder::new()
@@ -271,14 +295,9 @@ pub fn sign_standard_transfer(
         ],
     };
 
-    let estimated_size = serialize(&tx).len() as u64;
-    let fee_numerator = estimated_size
-        .checked_mul(fee_per_kb)
-        .and_then(|v| v.checked_add(999))
-        .ok_or_else(|| "fee calculation overflowed u64".to_string())?;
-    let absolute_fee = fee_numerator / 1000;
+    let mut absolute_fee = estimate_legacy_tx_fee(tx.input.len(), tx.output.len(), fee_per_kb)?;
 
-    let required_amount = amount_to_send
+    let mut required_amount = amount_to_send
         .checked_add(absolute_fee)
         .ok_or_else(|| "required amount overflowed u64".to_string())?;
 
@@ -288,7 +307,23 @@ pub fn sign_standard_transfer(
         ));
     }
 
-    tx.output[1].value = Amount::from_sat(total_input_amount - required_amount);
+    let mut change_value = total_input_amount - required_amount;
+    if change_value > 0 && change_value < LEGACY_P2PKH_DUST_LIMIT {
+        absolute_fee = absolute_fee
+            .checked_add(change_value)
+            .ok_or_else(|| "fee calculation overflowed dust adjustment".to_string())?;
+        required_amount = amount_to_send
+            .checked_add(absolute_fee)
+            .ok_or_else(|| "required amount overflowed dust adjustment".to_string())?;
+        if required_amount > total_input_amount {
+            return Err(format!(
+                "insufficient funds after dust adjustment: inputs={total_input_amount}, required={required_amount}"
+            ));
+        }
+        change_value = 0;
+    }
+
+    tx.output[1].value = Amount::from_sat(change_value);
 
     let pubkey_hash = hash160::Hash::hash(&bitcoin_pubkey.inner.serialize());
     let p2pkh_script = Builder::new()
