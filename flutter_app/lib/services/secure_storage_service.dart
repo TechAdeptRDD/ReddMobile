@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_declarations
+
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -14,17 +16,15 @@ class SecureStorageInvalidatedException implements Exception {
 
 class SecureStorageService {
   String? _cachedFiatPreference;
-  // ignore: prefer_const_constructors, prefer_const_declarations
   static final AndroidOptions _androidOptions =
       AndroidOptions(encryptedSharedPreferences: true, resetOnError: true);
-  // ignore: prefer_const_constructors, prefer_const_declarations
   static final IOSOptions _iosOptions = IOSOptions(
     accessibility: KeychainAccessibility.passcode,
 
     synchronizable: false,
   );
 
-  final _storage = FlutterSecureStorage(
+  final FlutterSecureStorage _storage = FlutterSecureStorage(
     aOptions: _androidOptions,
     iOptions: _iosOptions,
   );
