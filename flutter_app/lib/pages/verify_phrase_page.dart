@@ -1,7 +1,9 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
-import '../services/secure_storage_service.dart';
+
 import '../main.dart';
+import '../services/secure_storage_service.dart';
 
 class VerifyPhrasePage extends StatefulWidget {
   final String mnemonic;
@@ -24,45 +26,56 @@ class _VerifyPhrasePageState extends State<VerifyPhrasePage> {
     _generateChallenge();
   }
 
+  @override
+  void dispose() {
+    _selectedAnswers.clear();
+    _missingIndices = const [];
+    _shuffledBank = const [];
+    _words = const [];
+    super.dispose();
+  }
+
   void _generateChallenge() {
-    final random = Random();
+    final random = Random.secure();
+    final wordCount = _words.length;
+
     Set<int> indices = {};
-    while (indices.length < 3) {
-      indices.add(random.nextInt(12));
+    while (indices.length < 3 && indices.length < wordCount) {
+      indices.add(random.nextInt(wordCount));
     }
     _missingIndices = indices.toList()..sort();
 
-    List<String> bank = [];
-    for (int i in _missingIndices) {
+    final bank = <String>[];
+    for (final i in _missingIndices) {
       bank.add(_words[i]);
     }
 
-    // Add some fake words for the multiple choice
-    final fakes = ["apple", "river", "crypto", "rocket", "pizza", "galaxy"];
-    fakes.shuffle();
-    bank.addAll(fakes.take(3));
-    bank.shuffle();
+    const fakes = ['apple', 'river', 'crypto', 'rocket', 'pizza', 'galaxy'];
+    final shuffledFakes = [...fakes]..shuffle(random);
+    bank.addAll(shuffledFakes.take(3));
+    bank.shuffle(random);
     _shuffledBank = bank;
   }
 
   void _verifyAndProceed() async {
-    for (int i in _missingIndices) {
+    for (final i in _missingIndices) {
       if (_selectedAnswers[i] != _words[i]) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("Incorrect words. Try again."),
+            content: Text('Incorrect words. Try again.'),
             backgroundColor: Colors.redAccent));
         return;
       }
     }
 
-    // They passed! Save to secure enclave and enter app.
     final storage = SecureStorageService();
     await storage.saveMnemonic(widget.mnemonic);
+
     if (mounted) {
       Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const MainNavigation()),
-          (route) => false);
+        context,
+        MaterialPageRoute(builder: (_) => const MainNavigation()),
+        (route) => false,
+      );
     }
   }
 
@@ -71,19 +84,16 @@ class _VerifyPhrasePageState extends State<VerifyPhrasePage> {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(
-          title: const Text("Verify Phrase",
-              style: TextStyle(color: Colors.white)),
+          title: const Text('Verify Phrase', style: TextStyle(color: Colors.white)),
           backgroundColor: Colors.transparent,
           elevation: 0),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            const Text("Tap the missing words to verify your backup.",
+            const Text('Tap the missing words to verify your backup.',
                 style: TextStyle(color: Colors.grey, fontSize: 16)),
             const SizedBox(height: 20),
-
-            // The fill-in-the-blank grid
             Expanded(
               child: GridView.builder(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -91,12 +101,11 @@ class _VerifyPhrasePageState extends State<VerifyPhrasePage> {
                     childAspectRatio: 3.5,
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10),
-                itemCount: 12,
+                itemCount: _words.length,
                 itemBuilder: (context, index) {
                   if (_missingIndices.contains(index)) {
                     return GestureDetector(
-                      onTap: () => setState(
-                          () => _selectedAnswers.remove(index)), // Deselect
+                      onTap: () => setState(() => _selectedAnswers.remove(index)),
                       child: Container(
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
@@ -109,7 +118,7 @@ class _VerifyPhrasePageState extends State<VerifyPhrasePage> {
                                 style: _selectedAnswers[index] == null
                                     ? BorderStyle.solid
                                     : BorderStyle.none)),
-                        child: Text(_selectedAnswers[index] ?? "Tap word below",
+                        child: Text(_selectedAnswers[index] ?? 'Tap word below',
                             style: TextStyle(
                                 color: _selectedAnswers[index] == null
                                     ? Colors.grey
@@ -124,18 +133,15 @@ class _VerifyPhrasePageState extends State<VerifyPhrasePage> {
                     decoration: BoxDecoration(
                         color: const Color(0xFF151515),
                         borderRadius: BorderRadius.circular(10)),
-                    child: Text("${index + 1}. ${_words[index]}",
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 16)),
+                    child: Text('${index + 1}. ${_words[index]}',
+                        style:
+                            const TextStyle(color: Colors.white54, fontSize: 16)),
                   );
                 },
               ),
             ),
-
-            // The Word Bank
-            const Text("Word Bank",
-                style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold)),
+            const Text('Word Bank',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,
@@ -146,12 +152,12 @@ class _VerifyPhrasePageState extends State<VerifyPhrasePage> {
                   backgroundColor:
                       isUsed ? Colors.black : const Color(0xFF151515),
                   label: Text(word,
-                      style: TextStyle(
-                          color: isUsed ? Colors.white24 : Colors.white)),
+                      style:
+                          TextStyle(color: isUsed ? Colors.white24 : Colors.white)),
                   onPressed: isUsed
                       ? null
                       : () {
-                          for (int i in _missingIndices) {
+                          for (final i in _missingIndices) {
                             if (_selectedAnswers[i] == null) {
                               setState(() => _selectedAnswers[i] = word);
                               break;
@@ -161,7 +167,6 @@ class _VerifyPhrasePageState extends State<VerifyPhrasePage> {
                 );
               }).toList(),
             ),
-
             const SizedBox(height: 30),
             SizedBox(
               width: double.infinity,
@@ -172,8 +177,8 @@ class _VerifyPhrasePageState extends State<VerifyPhrasePage> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15))),
                 onPressed:
-                    _selectedAnswers.length == 3 ? _verifyAndProceed : null,
-                child: const Text("VERIFY & ENTER WALLET",
+                    _selectedAnswers.length == _missingIndices.length ? _verifyAndProceed : null,
+                child: const Text('VERIFY & ENTER WALLET',
                     style: TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold)),
               ),

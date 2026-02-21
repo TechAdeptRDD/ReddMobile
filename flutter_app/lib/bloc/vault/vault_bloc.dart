@@ -22,9 +22,7 @@ class VaultUnlocking extends VaultState {}
 class VaultSetupRequired extends VaultState {}
 
 class VaultUnlocked extends VaultState {
-  final String decryptedKey;
-
-  VaultUnlocked(this.decryptedKey);
+  VaultUnlocked();
 }
 
 class VaultError extends VaultState {
@@ -91,7 +89,7 @@ class VaultBloc extends Bloc<VaultEvent, VaultState> {
         return;
       }
 
-      emit(VaultUnlocked(decryptedKey));
+      emit(VaultUnlocked());
     } catch (_) {
       emit(VaultError('Invalid PIN/Password.'));
     }

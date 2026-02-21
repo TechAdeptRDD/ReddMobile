@@ -9,7 +9,7 @@ import 'package:http/http.dart' as http;
 /// - Character Filtering: Ensures only printable ASCII is displayed in the Social Pulse.
 /// - Consensus Logic: Provides data-hooks for PoSV v2 (Proof of Stake Velocity).
 class PulseService {
-  static const String _baseUrl = "https://live.reddcoin.com/api/v2";
+  static const String _baseUrl = "https://blockbook.reddcoin.com/api/v2";
   static const Duration _timeout = Duration(seconds: 10);
 
   // Decodes OP_RETURN hex to UTF-8 and filters non-printable control characters
