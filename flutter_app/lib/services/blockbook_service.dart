@@ -66,6 +66,8 @@ class BlockbookService {
     String endpoint, {
     int maxRetries = _maxRetries,
   }) async {
+    // Deduplicate concurrent requests for the same endpoint to avoid thundering-herd
+    // behavior when multiple blocs/screens refresh at once.
     final existing = _inflightGets[endpoint];
     if (existing != null) return existing;
 
@@ -177,6 +179,8 @@ class BlockbookService {
   }
 
   int? _parseFeePerKbSats(dynamic rawFee) {
+    // Blockbook fee responses can vary by backend: sat/kB integer, decimal coin amount,
+    // or numeric strings. Normalize aggressively so fee estimation remains resilient.
     if (rawFee is num) {
       if (rawFee <= 0) return null;
 

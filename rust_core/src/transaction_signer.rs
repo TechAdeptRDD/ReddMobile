@@ -24,6 +24,8 @@ const LEGACY_OUTPUT_SIZE: u64 = 34;
 const LEGACY_P2PKH_DUST_LIMIT: u64 = 546;
 
 fn estimate_legacy_tx_fee(inputs: usize, outputs: usize, fee_per_kb: u64) -> Result<u64, String> {
+    // This estimator intentionally targets legacy P2PKH serialization sizes because ReddMobile's
+    // current transaction path signs non-segwit scripts.
     let tx_size = LEGACY_BASE_TX_SIZE
         .checked_add((inputs as u64).saturating_mul(LEGACY_P2PKH_INPUT_SIZE))
         .and_then(|v| v.checked_add((outputs as u64).saturating_mul(LEGACY_OUTPUT_SIZE)))
@@ -145,6 +147,8 @@ pub fn sign_opreturn_transaction(
     }
 
     let mut change_value = total_input_amount - required_amount;
+    // Dust outputs are not economically spendable and are commonly rejected by network policy.
+    // We fold sub-dust change into the fee so we do not create toxic outputs that strand funds.
     if change_value > 0 && change_value < LEGACY_P2PKH_DUST_LIMIT {
         absolute_fee = absolute_fee
             .checked_add(change_value)
@@ -167,6 +171,8 @@ pub fn sign_opreturn_transaction(
         .into_script();
 
     for index in 0..tx.input.len() {
+        // Legacy P2PKH signs each input against the previous output's script template.
+        // `SighashCache` must borrow the mutable transaction while computing each digest.
         let sighash = {
             let sighash_cache = SighashCache::new(&mut tx);
             sighash_cache
@@ -308,6 +314,7 @@ pub fn sign_standard_transfer(
     }
 
     let mut change_value = total_input_amount - required_amount;
+    // Keep change policy aligned with OP_RETURN signing path: avoid creating sub-dust outputs.
     if change_value > 0 && change_value < LEGACY_P2PKH_DUST_LIMIT {
         absolute_fee = absolute_fee
             .checked_add(change_value)

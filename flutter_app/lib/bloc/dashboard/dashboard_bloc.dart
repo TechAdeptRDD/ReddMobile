@@ -65,6 +65,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         super(DashboardInitial()) {
     on<LoadDashboardData>((event, emit) async {
       emit(DashboardLoading());
+      // Monotonic load ids guard against out-of-order async completions overwriting
+      // newer state with stale network responses.
       final loadId = ++_activeLoadId;
       try {
         final mnemonic = await storage.getMnemonic();
@@ -110,6 +112,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
           emit(DashboardLoaded(address, formatted, formattedFiat, txs));
         }
       } catch (e) {
+        // Keep error text intentionally generic to avoid leaking low-level parsing/network
+        // details into user-facing UI, while still signaling sync failure.
         if (loadId == _activeLoadId) {
           emit(DashboardError("Failed to sync wallet data."));
         }

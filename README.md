@@ -1,81 +1,103 @@
-# 🔴 ReddMobile: Socially Sustainable Web3 Wallet
+# 🔴 ReddMobile
 
-ReddMobile is an open-source, non-custodial mobile wallet for the Reddcoin (RDD) ecosystem. It combines a Flutter client with a Rust core for performance-sensitive wallet operations.
+ReddMobile is an open-source, non-custodial mobile wallet for the Reddcoin ecosystem. The project combines a Flutter application (`flutter_app`) with a Rust cryptography/signing core (`rust_core`) exposed over FFI.
 
-> **Status:** Active development. Some roadmap features are documented but not fully implemented yet.
+> **Project state:** Phase 1 (Baseline Audit) and Phase 2 (Vertical Slices) are complete. This repository now emphasizes Phase 3 quality: documentation, developer experience, and consistency hardening.
 
-## What ReddMobile Does
+## Current Feature Set
 
-- Creates and manages RDD wallets from a mobile-friendly Flutter UI.
-- Uses a Rust core (`rust_core`) for native/FFI-backed cryptographic and wallet logic.
-- Targets Android and iOS, with multi-platform Flutter scaffolding present.
+- Wallet onboarding with mnemonic generation/verification flows.
+- Dashboard balance + transaction history sourced from Blockbook.
+- Transaction creation + broadcast pipeline for standard sends and OP_RETURN use cases.
+- Social/identity-adjacent slices (Pulse and ReddID scaffolding).
+- Local secure persistence for wallet material and cache metadata.
 
-## Repository Layout
+## Repository Structure
 
 ```text
 ReddMobile/
-├── flutter_app/           # Main Flutter client app
-├── rust_core/             # Native Rust library compiled for mobile targets
-├── docs/                  # Developer and user documentation
-├── .github/workflows/     # CI pipelines
-├── CONTRIBUTING.md        # Contribution guidelines
-├── SECURITY.md            # Security reporting policy
-└── ARCHITECTURE.md        # High-level architecture notes
+├── flutter_app/                 # Flutter client (UI, BLoC slices, services)
+├── rust_core/                   # Rust FFI library for signing/crypto helpers
+├── docs/                        # Additional end-user + developer docs
+├── .github/                     # CI and contribution templates
+├── ARCHITECTURE.md              # Deep architecture and slice interaction guide
+├── CONTRIBUTING.md              # Onboarding + contribution workflow
+├── SECURITY.md                  # Security disclosure process
+└── README.md
 ```
 
 ## Prerequisites
 
-- Flutter SDK `3.19.x` (Dart `>=3.3.0 <4.0.0`)
-- Rust stable toolchain (`rustup`)
+- Flutter SDK `3.22.x` (stable channel recommended)
+- Dart SDK `>=3.3.0 <4.0.0`
+- Rust stable toolchain via `rustup`
 - Android SDK + NDK (for Android builds)
 - Xcode + CocoaPods (for iOS builds on macOS)
 
-## Quick Start (Local Development)
+## Quick Start
 
-### 1) Clone and enter repo
+### 1) Clone
 
 ```bash
 git clone https://github.com/TechAdeptRDD/ReddMobile.git
 cd ReddMobile
 ```
 
-### 2) Build the Rust core for Android
+### 2) Build Rust Android libraries
 
 ```bash
 cd rust_core
-rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
+rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
 cargo install cargo-ndk --locked
-cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 \
+cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 \
   -o ../flutter_app/android/app/src/main/jniLibs build --release
 cd ..
 ```
 
-### 3) Install Flutter dependencies and run
+### 3) Install Flutter dependencies
 
 ```bash
 cd flutter_app
 flutter pub get
+```
+
+### 4) Run locally
+
+```bash
 flutter run
 ```
 
-## Dependency Notes
+## Runtime Endpoints
 
-- Flutter dependencies are defined in `flutter_app/pubspec.yaml`.
-- Native dependencies are defined in `rust_core/Cargo.toml`.
-- Keep dependency updates small and frequent; include changelog notes in PR descriptions for any major upgrades.
+ReddMobile’s blockchain service integration is standardized on:
 
-## Security and Responsible Disclosure
+- `https://blockbook.reddcoin.com`
 
-Please report vulnerabilities through the process in `SECURITY.md`. Avoid opening public issues for undisclosed security vulnerabilities.
+Any documentation, config examples, or code references should use this domain.
+
+## Common Validation Commands
+
+From `flutter_app/`:
+
+```bash
+flutter analyze
+flutter test
+```
+
+From `rust_core/`:
+
+```bash
+cargo check
+```
 
 ## Contributing
 
-Read `CONTRIBUTING.md` before opening a PR. At minimum:
+Please read [`CONTRIBUTING.md`](./CONTRIBUTING.md) before opening a PR. For architecture context, start with [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
-- Run app and tests locally.
-- Keep commits focused and explain user impact.
-- Include screenshots/GIFs for UI changes.
+## Security
+
+If you discover a vulnerability, follow the private reporting process in [`SECURITY.md`](./SECURITY.md).
 
 ## License
 
-Licensed under the terms in `LICENSE`.
+This repository is licensed under the terms in [`LICENSE`](./LICENSE).

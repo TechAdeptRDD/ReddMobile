@@ -1,29 +1,53 @@
-# 🛠️ ReddMobile Developer Manual (Technical Architecture)
+# 🛠️ ReddMobile Developer Manual
 
-## 1. The FFI Bridge (Native Handshake)
-The app uses **Dart FFI** to communicate with `rust_core`. 
-* **Rust Entry:** `rust_core/src/lib.rs`
-* **Dart Bridge:** `lib/services/vault_crypto_service.dart`
+## FFI Bridge: Flutter ↔ Rust
 
-**Data Flow:**
-1. Dart encodes data (e.g., UTXOs) to JSON strings.
-2. Dart converts strings to `Pointer<Utf8>`.
-3. Rust receives the pointer, performs crypto operations, and returns a new pointer to a hex-encoded transaction.
-4. Dart reads the string and cleans up memory using `malloc.free()`.
+ReddMobile uses Dart FFI to invoke selected Rust functions for crypto-sensitive operations.
 
-## 2. BLoC State Management
-We utilize the **BLoC (Business Logic Component)** pattern to separate UI from logic.
-* **DashboardBloc:** Manages balance and transaction broadcasting.
-* **ActivityBloc:** Manages the transaction history state.
-* **Navigation:** Blocs are provided globally in `main.dart` to prevent `ProviderNotFoundException` during screen transitions.
+- Rust entry: `rust_core/src/lib.rs`
+- Rust transaction/crypto modules: `rust_core/src/transaction_signer.rs`, `rust_core/src/vault_crypto.rs`, `rust_core/src/transaction_builder.rs`
+- Flutter service facade: `flutter_app/lib/services/vault_crypto_service.dart`
 
-## 3. The CI/CD Pipeline (Release Factory)
-The project uses GitHub Actions (`.github/workflows/android_build.yml`) to:
-1.  **Cross-Compile Rust:** Uses `cargo-ndk` to build for `arm64-v8a`.
-2.  **Bundle Assets:** Copies `.so` files into `android/app/src/main/jniLibs`.
-3.  **Build Flutter:** Compiles the APK with `--dart-define` versioning.
-4.  **Auto-Release:** Creates a GitHub Release upon a version tag (e.g., `v0.1.3`).
+### Data flow summary
 
-## 4. Troubleshooting Build Errors
-* **"Missing Clang":** Ensure `ANDROID_NDK_HOME` is set in the build environment.
-* **"ProviderNotFound":** Always check that the Bloc is provided in `main.dart` above the `MaterialApp`.
+1. Flutter assembles inputs (mnemonic, UTXOs, payloads).
+2. Inputs are serialized to UTF-8/JSON strings across FFI.
+3. Rust validates, signs/builds payloads, and returns serialized outputs.
+4. Flutter forwards signed hex to Blockbook broadcast endpoints.
+
+## State Management
+
+The Flutter app uses BLoC for feature slices.
+
+- `DashboardBloc`: address derivation, balance/history load, fiat enrichment.
+- `ActivityBloc`: transaction feed loading.
+- `OnboardingBloc`: wallet setup progression.
+
+This separation keeps UI widgets declarative and isolates side effects in blocs/services.
+
+## Networking and Sync
+
+`BlockbookService` is the chain data adapter. It includes:
+
+- HTTPS-only endpoint enforcement
+- Retries with exponential backoff + jitter
+- Timeout handling
+- Lightweight response caching
+- In-flight request deduplication
+
+Canonical endpoint domain:
+
+- `https://blockbook.reddcoin.com`
+
+## CI/CD
+
+Primary workflow: `.github/workflows/flutter_build.yml`
+
+- PR checks: `flutter analyze`, `flutter test`
+- Release tags: Rust Android library build + Flutter APK build + release publishing
+
+## Troubleshooting
+
+- **Android Rust build fails:** verify NDK is installed and target triples were added with `rustup target add ...`.
+- **BLoC provider errors:** ensure blocs are injected above consuming widgets in `main.dart`.
+- **Node fetch instability:** check endpoint reachability for `blockbook.reddcoin.com` and rerun with logs.
