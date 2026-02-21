@@ -15,6 +15,11 @@ class BlockbookService {
   static const Duration _addressCacheTtl = Duration(minutes: 2);
   static const int _fallbackFeePerKbSats = 10000;
   static const int _satsPerCoin = 100000000;
+  static const Map<String, String> _acceptJsonHeaders = {'Accept': 'application/json'};
+  static const Map<String, String> _sendTxHeaders = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
 
   final http.Client _client;
   final SecureStorageService _storage;
@@ -85,7 +90,7 @@ class BlockbookService {
     for (var attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         final response = await _client
-            .get(_buildUri(endpoint), headers: const {'Accept': 'application/json'})
+            .get(_buildUri(endpoint), headers: _acceptJsonHeaders)
             .timeout(_timeout);
 
         if (response.statusCode == 429) {
@@ -211,7 +216,7 @@ class BlockbookService {
     final response = await _client
         .post(
           _buildUri('/api/v2/sendtx/'),
-          headers: const {'Content-Type': 'application/json', 'Accept': 'application/json'},
+          headers: _sendTxHeaders,
           body: json.encode({'hex': hex}),
         )
         .timeout(_timeout);

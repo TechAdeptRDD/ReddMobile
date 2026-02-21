@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../services/blockbook_service.dart';
@@ -51,6 +52,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   final SecureStorageService storage;
   final VaultCryptoService vault;
   final http.Client httpClient;
+  static const Duration _fiatRequestTimeout = Duration(seconds: 6);
   int _activeLoadId = 0;
 
   DashboardBloc({
@@ -77,8 +79,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         final address = vault.deriveReddcoinAddress(mnemonic);
 
         final data = await blockbook.getAddressDetails(address);
-        final balanceSats = int.parse(data['balance'] ?? '0') +
-            int.parse(data['unconfirmedBalance'] ?? '0');
+        final balanceSats = (int.tryParse('${data['balance'] ?? '0'}') ?? 0) +
+            (int.tryParse('${data['unconfirmedBalance'] ?? '0'}') ?? 0);
         final balanceRdd = balanceSats / 100000000;
 
         String formatted = balanceRdd.toStringAsFixed(2).replaceAllMapped(
@@ -89,15 +91,20 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         final preferredCurrency =
             (await storage.getFiatPreference()).toLowerCase();
         try {
-          final res = await httpClient.get(
-            Uri.parse(
-              'https://api.coingecko.com/api/v3/simple/price?ids=reddcoin&vs_currencies=$preferredCurrency',
-            ),
-          );
+          final res = await httpClient
+              .get(
+                Uri.parse(
+                  'https://api.coingecko.com/api/v3/simple/price?ids=reddcoin&vs_currencies=$preferredCurrency',
+                ),
+              )
+              .timeout(_fiatRequestTimeout);
           if (res.statusCode == 200) {
-            fiatPrice =
-                (json.decode(res.body)["reddcoin"][preferredCurrency] as num)
-                    .toDouble();
+            final decoded = json.decode(res.body) as Map<String, dynamic>;
+            final reddcoin = decoded['reddcoin'] as Map<String, dynamic>?;
+            final rawPrice = reddcoin?[preferredCurrency];
+            if (rawPrice is num) {
+              fiatPrice = rawPrice.toDouble();
+            }
           }
         } catch (_) {
           /* Silently fail fiat fetch to keep core wallet functional */
@@ -118,7 +125,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
           emit(DashboardError("Failed to sync wallet data."));
         }
       }
-    });
+    }, transformer: restartable());
   }
 
   @override
