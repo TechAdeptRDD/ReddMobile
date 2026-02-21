@@ -16,7 +16,7 @@ class SecureStorageService {
   String? _cachedFiatPreference;
   static const AndroidOptions _androidOptions =
       AndroidOptions(encryptedSharedPreferences: true, resetOnError: true);
-  static final IOSOptions _iosOptions = const IOSOptions(
+  static const IOSOptions _iosOptions = IOSOptions(
     accessibility: KeychainAccessibility.passcode,
 
     synchronizable: false,
