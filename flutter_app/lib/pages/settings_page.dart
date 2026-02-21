@@ -58,7 +58,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   platform == "X (Twitter)"
                       ? Icons.alternate_email
                       : Icons.discord,
-                  color: Color(0xFFE31B23)),
+                  color: const Color(0xFFE31B23)),
               const SizedBox(width: 10),
               Text("Link $platform",
                   style: const TextStyle(
@@ -334,8 +334,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   _removeContact(contact["handle"]!),
                             ),
                           ),
-                        ))
-                    .toList(),
+                        )),
               ],
             ),
     );

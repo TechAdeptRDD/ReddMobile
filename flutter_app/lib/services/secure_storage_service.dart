@@ -18,6 +18,7 @@ class SecureStorageService {
       AndroidOptions(encryptedSharedPreferences: true, resetOnError: true);
   static const IOSOptions _iosOptions = IOSOptions(
     accessibility: KeychainAccessibility.passcodeSetThisDeviceOnly,
+
     synchronizable: false,
   );
 

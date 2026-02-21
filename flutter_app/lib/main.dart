@@ -121,9 +121,9 @@ class _MainNavigationState extends State<MainNavigation> {
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
         items: [
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
               icon: Icon(Icons.person_search), label: "Identity"),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
               icon: Icon(Icons.account_balance_wallet), label: "Wallet"),
           BottomNavigationBarItem(
             icon: BlocBuilder<ActivityBloc, ActivityState>(
@@ -139,7 +139,7 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
             label: "Global",
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
               icon: Icon(Icons.settings), label: "Settings"),
         ],
       ),

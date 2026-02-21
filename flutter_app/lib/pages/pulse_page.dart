@@ -6,7 +6,7 @@ class PulsePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final PulseService _pulse = PulseService();
+    final PulseService pulse = PulseService();
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F0F),
@@ -16,7 +16,7 @@ class PulsePage extends StatelessWidget {
                   TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           backgroundColor: Colors.transparent),
       body: FutureBuilder<List<Map<String, String>>>(
-        future: _pulse.getGlobalPulse(),
+        future: pulse.getGlobalPulse(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(
