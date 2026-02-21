@@ -1,75 +1,106 @@
 # 🛠️ Contributing to ReddMobile
 
-Thanks for helping improve ReddMobile. This guide is optimized for new open-source contributors and repeat maintainers.
+Thanks for contributing to ReddMobile. This guide is intended to reduce setup friction and improve review quality.
 
-## Code of Conduct
+## 1) Before You Start
 
-Be respectful, constructive, and collaborative in issues and pull requests.
+- Read [`README.md`](./README.md) and [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+- Search existing issues/PRs to avoid duplicate work.
+- For security-sensitive findings, use [`SECURITY.md`](./SECURITY.md) (do not open public exploit issues).
 
-## Development Setup
+## 2) Local Development Setup
 
-### 1) Build Rust core (required before running Flutter app)
+## Prerequisites
+
+- Flutter `3.22.x` (stable)
+- Rust stable (`rustup`)
+- Android SDK + NDK for Android development
+- Xcode + CocoaPods for iOS development (macOS)
+
+### Step A — Clone
+
+```bash
+git clone https://github.com/TechAdeptRDD/ReddMobile.git
+cd ReddMobile
+```
+
+### Step B — Build Rust core for Android
 
 ```bash
 cd rust_core
-rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
+rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
 cargo install cargo-ndk --locked
-cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 \
+cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 \
   -o ../flutter_app/android/app/src/main/jniLibs build --release
 cd ..
 ```
 
-### 2) Install Flutter dependencies
+### Step C — Install Flutter dependencies
 
 ```bash
 cd flutter_app
 flutter pub get
 ```
 
-### 3) Run tests and lint
+### Step D — Run app
 
 ```bash
-flutter test
-flutter analyze
+flutter run
 ```
 
-## Branching and Commit Standards
+## 3) Build and Test Commands
 
-- Create a focused branch per feature/fix.
-- Use clear commit messages (e.g., `docs: clarify Android Rust build steps`).
-- Keep pull requests small enough to review in one sitting.
+Run from `flutter_app/` unless noted.
 
-## Pull Request Checklist
+```bash
+flutter analyze
+flutter test
+```
 
-Before opening a PR, confirm:
+Rust checks from `rust_core/`:
 
-- [ ] Code builds locally.
-- [ ] Tests pass locally.
-- [ ] Any new behavior includes tests or rationale for no tests.
-- [ ] Documentation is updated (`README.md`, `docs/`, or inline comments) if behavior changed.
-- [ ] UI changes include screenshots for both small and large screens where applicable.
-- [ ] Security-sensitive changes describe threat model impact.
+```bash
+cargo check
+```
 
-## Review Expectations
+## 4) Branching and Commits
 
-- PRs should include context, approach, and test evidence.
-- Maintainers may ask for scope reduction if a PR is too large.
-- Breaking changes must be explicitly flagged in the PR description.
+- Use focused branches (`feat/...`, `fix/...`, `docs/...`, `chore/...`).
+- Keep commits scoped and descriptive.
+- Rebase/squash where useful to keep history readable.
 
-## Security Contributions
+## 5) Pull Request Expectations
 
-For vulnerabilities, follow `SECURITY.md` and avoid posting exploit details in public issues.
+Use the repository PR template and include:
 
-## CI & Build Troubleshooting
+- Problem statement and user/developer impact.
+- Scope boundaries (what is intentionally out of scope).
+- Validation evidence (commands + outputs).
+- Screenshots for UI changes.
 
-### Launcher Icon RangeError
+### PR Checklist
 
-If CI fails with:
+- [ ] App builds locally for touched platform(s).
+- [ ] `flutter analyze` passes.
+- [ ] `flutter test` passes.
+- [ ] `cargo check` run if `rust_core` changed.
+- [ ] Docs updated for behavior/config changes.
+- [ ] No secrets or private keys committed.
 
-`RangeError (index): Index out of range: no indices are valid: 0`
+## 6) Issue Quality Standards
 
-Try:
+When opening issues, include:
 
-1. Ensure `assets/images/logo.png` is a valid 1024x1024 PNG.
-2. Remove `adaptive_icon_background` and `adaptive_icon_foreground` in `pubspec.yaml` if misconfigured.
-3. Pin `flutter_launcher_icons` to a known stable version (example: `0.13.1`).
+- Current behavior
+- Expected behavior
+- Reproduction steps
+- Environment (OS/device, Flutter version, branch/commit)
+- Logs/screenshots where helpful
+
+## 7) Domain Consistency Rule
+
+ReddMobile’s blockchain endpoint references must use:
+
+- `https://blockbook.reddcoin.com`
+
+Do not introduce references to legacy domains in docs, comments, or configuration examples.
