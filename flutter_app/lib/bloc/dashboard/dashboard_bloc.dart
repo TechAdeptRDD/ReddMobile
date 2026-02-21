@@ -2,49 +2,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:equatable/equatable.dart';
 import '../../services/blockbook_service.dart';
 import '../../services/secure_storage_service.dart';
 import '../../services/vault_crypto_service.dart';
-
-// --- Events ---
-abstract class DashboardEvent extends Equatable {
-  const DashboardEvent();
-  @override
-  List<Object> get props => [];
-}
-
-class LoadDashboardData extends DashboardEvent {}
-
-// --- States ---
-abstract class DashboardState extends Equatable {
-  const DashboardState();
-  @override
-  List<Object> get props => [];
-}
-
-class DashboardInitial extends DashboardState {}
-
-class DashboardLoading extends DashboardState {}
-
-class DashboardLoaded extends DashboardState {
-  final String address;
-  final String formattedBalance;
-  final String fiatValue;
-  final List<dynamic> history;
-
-  const DashboardLoaded(
-      this.address, this.formattedBalance, this.fiatValue, this.history);
-  @override
-  List<Object> get props => [address, formattedBalance, fiatValue, history];
-}
-
-class DashboardError extends DashboardState {
-  final String message;
-  const DashboardError(this.message);
-  @override
-  List<Object> get props => [message];
-}
+import 'dashboard_event.dart';
+import 'dashboard_state.dart';
 
 // --- Bloc ---
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
@@ -90,7 +52,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         // Fetch live fiat price with selected currency preference.
         double fiatPrice = 0.0;
         final preferredCurrency =
-            (await storage.getFiatPreference()).toLowerCase();
+            (await storage.getFiatPreference()).toLowerCase().trim();
         try {
           final res = await httpClient
               .get(
@@ -127,6 +89,11 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         }
       }
     }, transformer: restartable());
+
+    on<AcquireReddIDEvent>((event, emit) {
+      emit(const ReddIDPayloadGenerated(''));
+    }, transformer: restartable());
+
   }
 
   @override

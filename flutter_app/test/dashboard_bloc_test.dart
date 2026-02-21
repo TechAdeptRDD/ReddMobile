@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:redd_mobile/bloc/dashboard/dashboard_bloc.dart';
+import 'package:redd_mobile/bloc/dashboard/dashboard_event.dart';
+import 'package:redd_mobile/bloc/dashboard/dashboard_state.dart';
 import 'package:redd_mobile/services/blockbook_service.dart';
 import 'package:redd_mobile/services/secure_storage_service.dart';
 import 'package:redd_mobile/services/vault_crypto_service.dart';

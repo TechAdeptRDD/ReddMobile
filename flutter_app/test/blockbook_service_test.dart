@@ -69,7 +69,7 @@ void main() {
     expect(first['balance'], '100000000');
 
     final offlineService = BlockbookService(
-      httpClient: MockClient((_) async => throw const http.ClientException('offline')),
+      httpClient: MockClient((_) async => throw http.ClientException('offline')),
       secureStorageService: storage,
     );
 

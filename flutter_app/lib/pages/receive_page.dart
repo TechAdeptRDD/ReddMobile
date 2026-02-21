@@ -39,9 +39,11 @@ class _ReceivePageState extends State<ReceivePage> {
                 "Drop me a tip on the ReddCoin Network! 🚀\\nDownload ReddMobile to send RDD instantly.");
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Error exporting card.")));
+          const SnackBar(content: Text("Error exporting card.")),
+        );
+      }
     }
 
     setState(() => _isExporting = false);
@@ -61,9 +63,11 @@ class _ReceivePageState extends State<ReceivePage> {
       body: FutureBuilder<String?>(
         future: storage.getMnemonic(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(
-                child: CircularProgressIndicator(color: Color(0xFFE31B23)));
+              child: CircularProgressIndicator(color: Color(0xFFE31B23)),
+            );
+          }
           final address = vault.deriveReddcoinAddress(snapshot.data!);
 
           return Padding(

@@ -55,7 +55,7 @@ class BlockbookService {
       final payload = decoded['payload'];
       if (cachedAt == null || payload is! Map<String, dynamic>) return null;
       if (DateTime.now().difference(cachedAt) > ttl) return null;
-      return payload;
+      return Map<String, dynamic>.from(payload);
     } catch (_) {
       await _storage.deleteCacheValue(key);
       return null;
@@ -139,7 +139,7 @@ class BlockbookService {
     if (cached != null) return cached;
 
     final data = await _reliableGet('/api/v2/');
-    final backend = data is Map<String, dynamic> ? (data['backend'] as Map<String, dynamic>? ?? {}) : {};
+    final backend = data is Map ? Map<String, dynamic>.from(data['backend'] as Map? ?? {}) : <String, dynamic>{};
     if (backend.isNotEmpty) {
       await _writeCachedMap(key, backend);
     }
@@ -160,7 +160,7 @@ class BlockbookService {
     final data = await _reliableGet('/api/v2/address/$address');
     if (data is Map<String, dynamic>) {
       await _writeCachedMap(key, data);
-      return data;
+      return Map<String, dynamic>.from(data);
     }
 
     return cached ?? {};
