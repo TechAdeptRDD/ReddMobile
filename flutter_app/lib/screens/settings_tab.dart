@@ -39,12 +39,11 @@ class SettingsTab extends StatelessWidget {
                 activeColor: const Color(0xFFE31B23)),
           ),
           const Divider(color: Colors.white24),
-          ListTile(
-            leading: const Icon(Icons.info_outline, color: Colors.grey),
-            title: const Text("About ReddMobile",
-                style: TextStyle(color: Colors.white)),
-            subtitle: Text("Version $appVersion",
-                style: const TextStyle(color: Colors.grey)),
+          const ListTile(
+            leading: Icon(Icons.info_outline, color: Colors.grey),
+            title: Text("About ReddMobile", style: TextStyle(color: Colors.white)),
+            subtitle:
+                Text("Version $appVersion", style: TextStyle(color: Colors.grey)),
           ),
         ],
       ),

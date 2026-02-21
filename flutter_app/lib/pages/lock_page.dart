@@ -58,9 +58,10 @@ class _LockPageState extends State<LockPage> {
   }
 
   void _unlockApp() {
-    if (mounted)
+    if (mounted) {
       Navigator.pushReplacement(context,
           MaterialPageRoute(builder: (context) => const MainNavigation()));
+    }
   }
 
   @override

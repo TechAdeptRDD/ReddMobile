@@ -97,8 +97,9 @@ class _ReddIDRegistrationPageState extends State<ReddIDRegistrationPage> {
       if (_selectedImage != null) {
         setState(() => _status = "Pinning Avatar to IPFS Network...");
         final uploadedCid = await _ipfs.uploadAvatar(_selectedImage!);
-        if (uploadedCid == null)
+        if (uploadedCid == null) {
           throw Exception("Failed to secure image on decentralized web.");
+        }
         cid = uploadedCid;
       }
 
@@ -109,8 +110,9 @@ class _ReddIDRegistrationPageState extends State<ReddIDRegistrationPage> {
 
       final myAddress = _vault.deriveReddcoinAddress(mnemonic);
       final utxos = await _blockbook.getUtxos(myAddress);
-      if (utxos.isEmpty)
+      if (utxos.isEmpty) {
         throw Exception("No RDD available to pay network registration fee.");
+      }
 
       final int estimatedFeeSats = await _blockbook.estimateFee();
       final selectedUtxos = _selectUtxosForFee(utxos, estimatedFeeSats);

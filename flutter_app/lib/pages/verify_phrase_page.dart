@@ -17,7 +17,7 @@ class _VerifyPhrasePageState extends State<VerifyPhrasePage> {
   late List<String> _words;
   late List<int> _missingIndices;
   late List<String> _shuffledBank;
-  Map<int, String?> _selectedAnswers = {};
+  final Map<int, String?> _selectedAnswers = {};
 
   @override
   void initState() {

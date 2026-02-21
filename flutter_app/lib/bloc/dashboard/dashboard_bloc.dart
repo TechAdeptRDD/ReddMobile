@@ -84,7 +84,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         final balanceRdd = balanceSats / 100000000;
 
         String formatted = balanceRdd.toStringAsFixed(2).replaceAllMapped(
-            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
+            const RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+            (Match m) => '${m.group(1) ?? ''},');
 
         // Fetch live fiat price with selected currency preference.
         double fiatPrice = 0.0;

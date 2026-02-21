@@ -50,7 +50,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
             .getTransactions("Ru6sB6S79Z86V99Xy3S6sB6S79Z86V99Xy3");
         emit(ActivityLoaded(txs));
       } catch (e) {
-        emit(ActivityError("Failed to sync network activity."));
+        emit(const ActivityError("Failed to sync network activity."));
       }
     }, transformer: restartable());
   }
