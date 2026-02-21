@@ -46,7 +46,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         final balanceRdd = balanceSats / 100000000;
 
         String formatted = balanceRdd.toStringAsFixed(2).replaceAllMapped(
-            const RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
             (Match m) => '${m.group(1) ?? ''},');
 
         // Fetch live fiat price with selected currency preference.
@@ -54,7 +54,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         final preferredCurrency =
             (await storage.getFiatPreference()).toLowerCase().trim();
         try {
-          final res = await httpClient
+          final res = await this.httpClient
               .get(
                 Uri.parse(
                   'https://api.coingecko.com/api/v3/simple/price?ids=reddcoin&vs_currencies=$preferredCurrency',
@@ -85,7 +85,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         // Keep error text intentionally generic to avoid leaking low-level parsing/network
         // details into user-facing UI, while still signaling sync failure.
         if (loadId == _activeLoadId) {
-          emit(DashboardError("Failed to sync wallet data."));
+          emit(const DashboardError("Failed to sync wallet data."));
         }
       }
     }, transformer: restartable());
