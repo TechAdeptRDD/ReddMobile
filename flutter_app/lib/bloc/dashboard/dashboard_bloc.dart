@@ -13,7 +13,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   final BlockbookService blockbook;
   final SecureStorageService storage;
   final VaultCryptoService vault;
-  final http.Client httpClient;
+  final http.Client? httpClient;
   static const Duration _fiatRequestTimeout = Duration(seconds: 6);
   int _activeLoadId = 0;
 
@@ -35,7 +35,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       try {
         final mnemonic = await storage.getMnemonic();
         if (mnemonic == null) {
-          emit(const DashboardError("Wallet not found."));
+          emit(DashboardError("Wallet not found."));
           return;
         }
         final address = vault.deriveReddcoinAddress(mnemonic);
@@ -54,14 +54,14 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
             (await storage.getFiatPreference()).toLowerCase().trim();
         try {
           final res = await httpClient
-              .get(
+              ?.get(
                 Uri.parse(
                   'https://api.coingecko.com/api/v3/simple/price?ids=reddcoin&vs_currencies=$preferredCurrency',
                 ),
               )
               .timeout(_fiatRequestTimeout);
-          if (res.statusCode == 200) {
-            final decoded = json.decode(res.body) as Map<String, dynamic>;
+          if (res?.statusCode == 200) {
+            final decoded = json.decode(res!.body) as Map<String, dynamic>;
             final reddcoin = decoded['reddcoin'] as Map<String, dynamic>?;
             final rawPrice = reddcoin?[preferredCurrency];
             if (rawPrice is num) {
@@ -84,7 +84,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         // Keep error text intentionally generic to avoid leaking low-level parsing/network
         // details into user-facing UI, while still signaling sync failure.
         if (loadId == _activeLoadId) {
-          emit(DashboardError("Failed to sync wallet data."));
+          emit(const DashboardError("Failed to sync wallet data."));
         }
       }
     }, transformer: restartable());
@@ -97,7 +97,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
   @override
   Future<void> close() {
-    httpClient.close();
+    httpClient?.close();
     return super.close();
   }
 }
