@@ -27,6 +27,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadData() async {
     final contacts = await _storage.getContacts();
+    if (!mounted) return;
     setState(() {
       _contacts = contacts;
       _isLoading = false;
