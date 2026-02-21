@@ -51,6 +51,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   final SecureStorageService storage;
   final VaultCryptoService vault;
   final http.Client httpClient;
+  int _activeLoadId = 0;
 
   DashboardBloc({
     BlockbookService? blockbookService,
@@ -64,6 +65,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         super(DashboardInitial()) {
     on<LoadDashboardData>((event, emit) async {
       emit(DashboardLoading());
+      final loadId = ++_activeLoadId;
       try {
         final mnemonic = await storage.getMnemonic();
         if (mnemonic == null) {
@@ -104,10 +106,20 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
             "${totalFiat.toStringAsFixed(2)} ${preferredCurrency.toUpperCase()}";
 
         final List<dynamic> txs = data['transactions'] ?? [];
-        emit(DashboardLoaded(address, formatted, formattedFiat, txs));
+        if (loadId == _activeLoadId) {
+          emit(DashboardLoaded(address, formatted, formattedFiat, txs));
+        }
       } catch (e) {
-        emit(DashboardError("Failed to sync wallet data."));
+        if (loadId == _activeLoadId) {
+          emit(DashboardError("Failed to sync wallet data."));
+        }
       }
     });
+  }
+
+  @override
+  Future<void> close() {
+    httpClient.close();
+    return super.close();
   }
 }
