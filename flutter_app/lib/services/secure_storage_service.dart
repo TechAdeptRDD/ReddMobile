@@ -16,13 +16,13 @@ class SecureStorageService {
   String? _cachedFiatPreference;
   static const AndroidOptions _androidOptions =
       AndroidOptions(encryptedSharedPreferences: true, resetOnError: true);
-  static final IOSOptions _iosOptions = IOSOptions(
+  static final IOSOptions _iosOptions = const IOSOptions(
     accessibility: KeychainAccessibility.passcode,
 
     synchronizable: false,
   );
 
-  final _storage = const FlutterSecureStorage(
+  final _storage = FlutterSecureStorage(
     aOptions: _androidOptions,
     iOptions: _iosOptions,
   );
