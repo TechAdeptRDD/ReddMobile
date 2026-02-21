@@ -43,7 +43,6 @@ class _SettingsPageState extends State<SettingsPage> {
     final mnemonic = await _storage.getMnemonic();
     if (mnemonic == null) return;
 
-    final address = _vault.deriveReddcoinAddress(mnemonic);
     final signature = _vault.generateSocialSignature("ReddID Link", platform);
 
     if (mounted) {
@@ -138,7 +137,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
       if (didAuthenticate) {
         final mnemonic = await _storage.getMnemonic();
-        if (mounted && mnemonic != null) _showPhraseDialog(mnemonic);
+        if (!mounted) {
+          return;
+        }
+        if (mnemonic != null) {
+          _showPhraseDialog(mnemonic);
+        }
       }
     } catch (e) {
       _showPhraseDialog("Error accessing security enclave.");
@@ -253,10 +257,17 @@ class _SettingsPageState extends State<SettingsPage> {
                             onChanged: (val) async {
                               if (val != null) {
                                 await _storage.saveFiatPreference(val);
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                if (!context.mounted) {
+                                  return;
+                                }
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
                                     content: Text(
-                                        "Currency updated to ${val.toUpperCase()}"),
-                                    backgroundColor: const Color(0xFFE31B23)));
+                                      "Currency updated to ${val.toUpperCase()}",
+                                    ),
+                                    backgroundColor: const Color(0xFFE31B23),
+                                  ),
+                                );
                               }
                             }))),
                 const SizedBox(height: 40),

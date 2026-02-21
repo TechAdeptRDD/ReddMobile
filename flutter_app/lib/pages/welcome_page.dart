@@ -21,14 +21,16 @@ class _WelcomePageState extends State<WelcomePage> {
     setState(() => _isProcessing = true);
     final mnemonic = _vault.generateMnemonic();
 
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => BackupPhrasePage(mnemonic: mnemonic),
-        ),
-      );
+    if (!mounted) {
+      return;
     }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BackupPhrasePage(mnemonic: mnemonic),
+      ),
+    );
   }
 
   void _importWallet() {
@@ -38,8 +40,7 @@ class _WelcomePageState extends State<WelcomePage> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF151515),
-        title:
-            const Text('Import Wallet', style: TextStyle(color: Colors.white)),
+        title: const Text('Import Wallet', style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: controller,
           maxLines: 3,
@@ -73,17 +74,18 @@ class _WelcomePageState extends State<WelcomePage> {
 
               if (wordCount == 12 || wordCount == 24) {
                 await _storage.saveMnemonic(normalizedMnemonic);
-                controller.clear();
-
-                if (mounted) {
-                  Navigator.pop(context);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MainNavigation(),
-                    ),
-                  );
+                if (!context.mounted) {
+                  return;
                 }
+
+                controller.clear();
+                Navigator.pop(context);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(),
+                  ),
+                );
               }
             },
             child: const Text('IMPORT', style: TextStyle(color: Colors.white)),
@@ -104,14 +106,11 @@ class _WelcomePageState extends State<WelcomePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(),
-              const Icon(Icons.account_balance_wallet,
-                  size: 100, color: Color(0xFFE31B23)),
+              const Icon(Icons.account_balance_wallet, size: 100, color: Color(0xFFE31B23)),
               const SizedBox(height: 30),
               const Text('ReddMobile',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold)),
+                      color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               const Text('The Decentralized Social Wallet',
                   style: TextStyle(color: Colors.grey, fontSize: 16)),
@@ -130,23 +129,20 @@ class _WelcomePageState extends State<WelcomePage> {
                         onPressed: _createNewWallet,
                         child: const Text('CREATE NEW WALLET',
                             style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)))),
+                                color: Colors.white, fontWeight: FontWeight.bold)))),
                 const SizedBox(height: 20),
                 SizedBox(
                     width: double.infinity,
                     height: 55,
                     child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                            side: const BorderSide(
-                                color: Color(0xFFE31B23), width: 2),
+                            side: const BorderSide(color: Color(0xFFE31B23), width: 2),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(15))),
                         onPressed: _importWallet,
                         child: const Text('IMPORT EXISTING',
                             style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)))),
+                                color: Colors.white, fontWeight: FontWeight.bold)))),
               ],
               const SizedBox(height: 40),
             ],

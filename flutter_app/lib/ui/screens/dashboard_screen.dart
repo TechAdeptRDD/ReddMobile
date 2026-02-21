@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:redd_mobile/bloc/dashboard/dashboard_bloc.dart';
 import 'package:redd_mobile/bloc/dashboard/dashboard_event.dart';
+import 'package:redd_mobile/bloc/dashboard/dashboard_state.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key, required this.handle});
@@ -161,7 +162,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ElevatedButton(
                           onPressed: () {
                             context.read<DashboardBloc>().add(
-                                  AcquireReddIDEvent(_bidController.text),
+                                  AcquireReddIDEvent(),
                                 );
                           },
                           child: const Text('Generate Bid Payload'),
