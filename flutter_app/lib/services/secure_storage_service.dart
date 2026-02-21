@@ -14,8 +14,10 @@ class SecureStorageInvalidatedException implements Exception {
 
 class SecureStorageService {
   String? _cachedFiatPreference;
+  // ignore: prefer_const_constructors, prefer_const_declarations
   static final AndroidOptions _androidOptions =
       AndroidOptions(encryptedSharedPreferences: true, resetOnError: true);
+  // ignore: prefer_const_constructors, prefer_const_declarations
   static final IOSOptions _iosOptions = IOSOptions(
     accessibility: KeychainAccessibility.passcode,
 
