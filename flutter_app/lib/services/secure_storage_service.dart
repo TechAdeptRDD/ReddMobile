@@ -104,6 +104,19 @@ class SecureStorageService {
     await saveContacts(contacts);
   }
 
+  // --- Lightweight network cache ---
+  Future<void> writeCacheValue(String key, String value) async {
+    await _storage.write(key: key, value: value);
+  }
+
+  Future<String?> readCacheValue(String key) async {
+    return _storage.read(key: key);
+  }
+
+  Future<void> deleteCacheValue(String key) async {
+    await _storage.delete(key: key);
+  }
+
   Future<void> _writeCriticalValue(String key, String value) async {
     try {
       await _storage.write(key: key, value: value);

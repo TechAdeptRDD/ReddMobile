@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/activity_feed.dart';
@@ -19,6 +21,8 @@ class _WalletTabState extends State<WalletTab> {
   double _fiatValueUsd = 0.0;
   List<dynamic> _transactions = [];
   bool _isLoading = true;
+  Timer? _backgroundSyncTimer;
+  bool _syncInProgress = false;
 
   final BlockbookService _networkService = BlockbookService();
 
@@ -26,6 +30,26 @@ class _WalletTabState extends State<WalletTab> {
   void initState() {
     super.initState();
     _initializeWallet();
+    _startBackgroundSync();
+  }
+
+
+  void _startBackgroundSync() {
+    _backgroundSyncTimer?.cancel();
+    _backgroundSyncTimer = Timer.periodic(
+      const Duration(minutes: 2),
+      (_) {
+        if (_reddcoinAddress.isEmpty || _reddcoinAddress == 'Loading...') return;
+        _syncNetworkData(_reddcoinAddress, showLoader: false);
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _backgroundSyncTimer?.cancel();
+    _networkService.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeWallet() async {
@@ -40,26 +64,31 @@ class _WalletTabState extends State<WalletTab> {
     }
   }
 
-  Future<void> _syncNetworkData(String address) async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
+  Future<void> _syncNetworkData(String address, {bool showLoader = true}) async {
+    if (!mounted || _syncInProgress) return;
+    _syncInProgress = true;
+    if (showLoader) setState(() => _isLoading = true);
 
     // Fetch live data in parallel
     final detailsFuture = _networkService.getAddressDetails(address);
     final priceFuture = _networkService.getLivePrice();
 
-    final details = await detailsFuture;
-    final price = await priceFuture;
+    try {
+      final details = await detailsFuture;
+      final price = await priceFuture;
 
-    if (mounted) {
-      setState(() {
-        // Blockbook returns balance in base units (10^8)
-        _balanceRdd =
-            (double.tryParse(details['balance'] ?? '0') ?? 0) / 100000000;
-        _fiatValueUsd = _balanceRdd * price;
-        _transactions = details['transactions'] ?? [];
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          // Blockbook returns balance in base units (10^8)
+          _balanceRdd =
+              (double.tryParse(details['balance'] ?? '0') ?? 0) / 100000000;
+          _fiatValueUsd = _balanceRdd * price;
+          _transactions = details['transactions'] ?? [];
+          _isLoading = false;
+        });
+      }
+    } finally {
+      _syncInProgress = false;
     }
   }
 
