@@ -47,11 +47,21 @@ class DashboardError extends DashboardState {
 
 // --- Bloc ---
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
-  final BlockbookService blockbook = BlockbookService();
-  final SecureStorageService storage = SecureStorageService();
-  final VaultCryptoService vault = VaultCryptoService();
+  final BlockbookService blockbook;
+  final SecureStorageService storage;
+  final VaultCryptoService vault;
+  final http.Client httpClient;
 
-  DashboardBloc() : super(DashboardInitial()) {
+  DashboardBloc({
+    BlockbookService? blockbookService,
+    SecureStorageService? storageService,
+    VaultCryptoService? vaultCryptoService,
+    http.Client? httpClient,
+  })  : blockbook = blockbookService ?? BlockbookService(),
+        storage = storageService ?? SecureStorageService(),
+        vault = vaultCryptoService ?? VaultCryptoService(),
+        httpClient = httpClient ?? http.Client(),
+        super(DashboardInitial()) {
     on<LoadDashboardData>((event, emit) async {
       emit(DashboardLoading());
       try {
@@ -75,7 +85,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         final preferredCurrency =
             (await storage.getFiatPreference()).toLowerCase();
         try {
-          final res = await http.get(
+          final res = await httpClient.get(
             Uri.parse(
               'https://api.coingecko.com/api/v3/simple/price?ids=reddcoin&vs_currencies=$preferredCurrency',
             ),
