@@ -9,7 +9,8 @@ import 'package:http/http.dart' as http;
 /// - Character Filtering: Ensures only printable ASCII is displayed in the Social Pulse.
 /// - Consensus Logic: Provides data-hooks for PoSV v2 (Proof of Stake Velocity).
 class PulseService {
-  final String _baseUrl = "https://live.reddcoin.com/api/v2";
+  static const String _baseUrl = "https://live.reddcoin.com/api/v2";
+  static const Duration _timeout = Duration(seconds: 10);
 
   // Decodes OP_RETURN hex to UTF-8 and filters non-printable control characters
   String _decodeSocialMessage(String hexData) {
@@ -29,7 +30,12 @@ class PulseService {
 
   Future<List<Map<String, String>>> getGlobalPulse() async {
     try {
-      final res = await http.get(Uri.parse("$_baseUrl/txs?limit=20"));
+      final endpoint = Uri.parse("$_baseUrl/txs?limit=20");
+      if (endpoint.scheme != 'https') return [];
+
+      final res = await http
+          .get(endpoint, headers: const {'Accept': 'application/json'})
+          .timeout(_timeout);
       if (res.statusCode == 200) {
         final List txs = json.decode(res.body)["txs"];
         List<Map<String, String>> pulses = [];
@@ -41,7 +47,7 @@ class PulseService {
               if (message.isNotEmpty &&
                   message != "Encrypted or Binary Payload") {
                 pulses.add({
-                  "txid": tx["txid"],
+                  "txid": tx["txid"].toString(),
                   "message": message,
                   "value": tx["valueOut"].toString(),
                 });
@@ -51,8 +57,8 @@ class PulseService {
         }
         return pulses;
       }
-    } catch (e) {
-      print("RDD Pulse Error: $e");
+    } on Exception {
+      // Fail closed and keep UI stable.
     }
     return [];
   }

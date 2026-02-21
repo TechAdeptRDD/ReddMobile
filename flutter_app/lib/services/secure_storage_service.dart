@@ -1,8 +1,18 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 class SecureStorageService {
-  final _storage = const FlutterSecureStorage();
+  static const AndroidOptions _androidOptions =
+      AndroidOptions(encryptedSharedPreferences: true);
+  static const IOSOptions _iosOptions = IOSOptions(
+    accessibility: KeychainAccessibility.first_unlock_this_device,
+  );
+
+  final _storage = const FlutterSecureStorage(
+    aOptions: _androidOptions,
+    iOptions: _iosOptions,
+  );
 
   // --- Wallet Keys ---
   Future<void> saveMnemonic(String mnemonic) async {
@@ -10,7 +20,7 @@ class SecureStorageService {
   }
 
   Future<String?> getMnemonic() async {
-    return await _storage.read(key: 'wallet_mnemonic');
+    return _storage.read(key: 'wallet_mnemonic');
   }
 
   // --- Avatar-Rich Address Book ---
@@ -27,7 +37,7 @@ class SecureStorageService {
         try {
           final List<String> oldList = List<String>.from(jsonDecode(oldData));
           final migrated =
-              oldList.map((handle) => {"handle": handle, "cid": ""}).toList();
+              oldList.map((handle) => {'handle': handle, 'cid': ''}).toList();
           await saveContacts(migrated);
           await _storage.delete(key: 'saved_contacts'); // Clean up old key
           return migrated;
@@ -41,12 +51,12 @@ class SecureStorageService {
     try {
       final List<dynamic> decoded = jsonDecode(data);
       return decoded.map((e) => Map<String, String>.from(e)).toList();
-    } catch (e) {
+    } catch (_) {
       return [];
     }
   }
 
-  Future<void> addContact(String handle, {String cid = ""}) async {
+  Future<void> addContact(String handle, {String cid = ''}) async {
     final contacts = await getContacts();
     final cleanHandle = handle.toLowerCase().replaceAll('@', '').trim();
 
@@ -59,18 +69,18 @@ class SecureStorageService {
         await saveContacts(contacts);
       }
     } else {
-      contacts.add({"handle": cleanHandle, "cid": cid});
+      contacts.add({'handle': cleanHandle, 'cid': cid});
       await saveContacts(contacts);
     }
   }
 
   // --- Localization ---
   Future<void> saveFiatPreference(String currency) async {
-    await _storage.write(key: "fiat_pref", value: currency);
+    await _storage.write(key: 'fiat_pref', value: currency);
   }
 
   Future<String> getFiatPreference() async {
-    return await _storage.read(key: "fiat_pref") ?? "usd";
+    return _storage.read(key: 'fiat_pref') ?? 'usd';
   }
 
   Future<void> removeContact(String handle) async {

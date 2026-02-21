@@ -2,15 +2,29 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class BlockbookService {
-  final String baseUrl = 'https://live.reddcoin.com';
+  static const String _baseUrl = 'https://live.reddcoin.com';
+  static const Duration _timeout = Duration(seconds: 10);
+
+  Uri _buildUri(String endpoint) {
+    final uri = Uri.parse('$_baseUrl$endpoint');
+    if (uri.scheme != 'https') {
+      throw const FormatException('Insecure protocol is not allowed.');
+    }
+    return uri;
+  }
 
   Future<dynamic> _reliableGet(String endpoint) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl$endpoint')).timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200) return json.decode(response.body);
-      throw Exception('Failed to load data: ${response.statusCode}');
-    } catch (e) {
-      print("API Error: $e");
+      final response = await http
+          .get(_buildUri(endpoint), headers: const {'Accept': 'application/json'})
+          .timeout(_timeout);
+      if (response.statusCode != 200 || response.body.isEmpty) return null;
+      return json.decode(response.body);
+    } on FormatException {
+      return null;
+    } on http.ClientException {
+      return null;
+    } on Exception {
       return null;
     }
   }
