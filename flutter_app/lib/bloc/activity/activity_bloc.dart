@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../services/blockbook_service.dart';
@@ -51,6 +52,6 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       } catch (e) {
         emit(ActivityError("Failed to sync network activity."));
       }
-    });
+    }, transformer: restartable());
   }
 }

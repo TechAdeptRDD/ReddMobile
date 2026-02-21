@@ -40,7 +40,7 @@ class ReddIDTab extends StatelessWidget {
                   Icon(Icons.hub,
                       size: 80, color: Colors.white.withOpacity(0.1)),
                   const SizedBox(height: 20),
-                  const Text("ReddID registration coming in Phase 2",
+                  const Text("ReddID registration arriving through ongoing optimization",
                       style: TextStyle(color: Colors.grey)),
                 ],
               ),

@@ -13,6 +13,7 @@ class SecureStorageInvalidatedException implements Exception {
 }
 
 class SecureStorageService {
+  String? _cachedFiatPreference;
   static const AndroidOptions _androidOptions =
       AndroidOptions(encryptedSharedPreferences: true, resetOnError: true);
   static const IOSOptions _iosOptions = IOSOptions(
@@ -91,11 +92,19 @@ class SecureStorageService {
 
   // --- Localization ---
   Future<void> saveFiatPreference(String currency) async {
-    await _storage.write(key: 'fiat_pref', value: currency);
+    final normalizedCurrency = currency.trim().toLowerCase();
+    _cachedFiatPreference = normalizedCurrency;
+    await _storage.write(key: 'fiat_pref', value: normalizedCurrency);
   }
 
   Future<String> getFiatPreference() async {
-    return _storage.read(key: 'fiat_pref') ?? 'usd';
+    final cached = _cachedFiatPreference;
+    if (cached != null && cached.isNotEmpty) return cached;
+
+    final persisted = (await _storage.read(key: 'fiat_pref'))?.trim().toLowerCase();
+    final resolved = (persisted == null || persisted.isEmpty) ? 'usd' : persisted;
+    _cachedFiatPreference = resolved;
+    return resolved;
   }
 
   Future<void> removeContact(String handle) async {
