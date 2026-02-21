@@ -22,7 +22,7 @@ class SecureStorageService {
     synchronizable: false,
   );
 
-  final _storage = FlutterSecureStorage(
+  final _storage = const FlutterSecureStorage(
     aOptions: _androidOptions,
     iOptions: _iosOptions,
   );
