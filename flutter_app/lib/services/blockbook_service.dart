@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class BlockbookService {
-  static const String _baseUrl = 'https://live.reddcoin.com';
+  static const String _baseUrl = 'https://blockbook.reddcoin.com';
   static const Duration _timeout = Duration(seconds: 10);
 
   Uri _buildUri(String endpoint) {

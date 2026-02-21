@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../services/vault_crypto_service.dart';
-import '../services/secure_storage_service.dart';
+
 import '../main.dart';
+import '../services/secure_storage_service.dart';
+import '../services/vault_crypto_service.dart';
 import 'backup_phrase_page.dart';
 
 class WelcomePage extends StatefulWidget {
@@ -21,60 +22,75 @@ class _WelcomePageState extends State<WelcomePage> {
     final mnemonic = _vault.generateMnemonic();
 
     if (mounted) {
-      // Secure Flow: Route to Backup screen instead of saving instantly
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-            builder: (context) => BackupPhrasePage(mnemonic: mnemonic)),
+          builder: (context) => BackupPhrasePage(mnemonic: mnemonic),
+        ),
       );
     }
   }
 
   void _importWallet() {
     final controller = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF151515),
         title:
-            const Text("Import Wallet", style: TextStyle(color: Colors.white)),
+            const Text('Import Wallet', style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: controller,
           maxLines: 3,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
-              hintText: "Enter 12 or 24 word seed phrase...",
-              hintStyle: const TextStyle(color: Colors.grey),
-              filled: true,
-              fillColor: Colors.black26,
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(15))),
+            hintText: 'Enter 12 or 24 word seed phrase...',
+            hintStyle: const TextStyle(color: Colors.grey),
+            filled: true,
+            fillColor: Colors.black26,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+          ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child:
-                  const Text("CANCEL", style: TextStyle(color: Colors.grey))),
+            onPressed: () {
+              controller.clear();
+              Navigator.pop(context);
+            },
+            child: const Text('CANCEL', style: TextStyle(color: Colors.grey)),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE31B23)),
+              backgroundColor: const Color(0xFFE31B23),
+            ),
             onPressed: () async {
-              if (controller.text.trim().split(" ").length >= 12) {
-                await _storage.saveMnemonic(controller.text.trim());
+              final normalizedMnemonic =
+                  controller.text.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+              final wordCount = normalizedMnemonic.split(' ').length;
+
+              if (wordCount == 12 || wordCount == 24) {
+                await _storage.saveMnemonic(normalizedMnemonic);
+                controller.clear();
+
                 if (mounted) {
                   Navigator.pop(context);
                   Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const MainNavigation()));
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MainNavigation(),
+                    ),
+                  );
                 }
               }
             },
-            child: const Text("IMPORT", style: TextStyle(color: Colors.white)),
+            child: const Text('IMPORT', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
-    );
+    ).whenComplete(controller.dispose);
   }
 
   @override
@@ -91,13 +107,13 @@ class _WelcomePageState extends State<WelcomePage> {
               const Icon(Icons.account_balance_wallet,
                   size: 100, color: Color(0xFFE31B23)),
               const SizedBox(height: 30),
-              const Text("ReddMobile",
+              const Text('ReddMobile',
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: 36,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
-              const Text("The Decentralized Social Wallet",
+              const Text('The Decentralized Social Wallet',
                   style: TextStyle(color: Colors.grey, fontSize: 16)),
               const Spacer(),
               if (_isProcessing)
@@ -112,7 +128,7 @@ class _WelcomePageState extends State<WelcomePage> {
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(15))),
                         onPressed: _createNewWallet,
-                        child: const Text("CREATE NEW WALLET",
+                        child: const Text('CREATE NEW WALLET',
                             style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold)))),
@@ -127,7 +143,7 @@ class _WelcomePageState extends State<WelcomePage> {
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(15))),
                         onPressed: _importWallet,
-                        child: const Text("IMPORT EXISTING",
+                        child: const Text('IMPORT EXISTING',
                             style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold)))),

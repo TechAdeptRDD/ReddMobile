@@ -1,12 +1,23 @@
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/services.dart';
+
+class SecureStorageInvalidatedException implements Exception {
+  final String message;
+
+  const SecureStorageInvalidatedException(this.message);
+
+  @override
+  String toString() => message;
+}
 
 class SecureStorageService {
   static const AndroidOptions _androidOptions =
-      AndroidOptions(encryptedSharedPreferences: true);
+      AndroidOptions(encryptedSharedPreferences: true, resetOnError: true);
   static const IOSOptions _iosOptions = IOSOptions(
-    accessibility: KeychainAccessibility.first_unlock_this_device,
+    accessibility: KeychainAccessibility.when_passcode_set_this_device_only,
+    synchronizable: false,
   );
 
   final _storage = const FlutterSecureStorage(
@@ -16,11 +27,15 @@ class SecureStorageService {
 
   // --- Wallet Keys ---
   Future<void> saveMnemonic(String mnemonic) async {
-    await _storage.write(key: 'wallet_mnemonic', value: mnemonic);
+    await _writeCriticalValue('wallet_mnemonic', mnemonic.trim());
   }
 
   Future<String?> getMnemonic() async {
-    return _storage.read(key: 'wallet_mnemonic');
+    return _readCriticalValue('wallet_mnemonic');
+  }
+
+  Future<void> deleteMnemonic() async {
+    await _storage.delete(key: 'wallet_mnemonic');
   }
 
   // --- Avatar-Rich Address Book ---
@@ -87,5 +102,27 @@ class SecureStorageService {
     final contacts = await getContacts();
     contacts.removeWhere((c) => c['handle'] == handle);
     await saveContacts(contacts);
+  }
+
+  Future<void> _writeCriticalValue(String key, String value) async {
+    try {
+      await _storage.write(key: key, value: value);
+    } on PlatformException catch (e) {
+      throw SecureStorageInvalidatedException(
+        'Failed to write secure value for $key: ${e.code}',
+      );
+    }
+  }
+
+  Future<String?> _readCriticalValue(String key) async {
+    try {
+      return await _storage.read(key: key);
+    } on PlatformException catch (e) {
+      // Device security state changed (e.g. passcode removed), treat as invalidated.
+      await _storage.delete(key: key);
+      throw SecureStorageInvalidatedException(
+        'Secure value for $key is no longer accessible: ${e.code}',
+      );
+    }
   }
 }
