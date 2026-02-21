@@ -18,13 +18,19 @@ class PulsePage extends StatelessWidget {
       body: FutureBuilder<List<Map<String, String>>>(
         future: _pulse.getGlobalPulse(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(
-                child: CircularProgressIndicator(color: Color(0xFFE31B23)));
-          if (snapshot.data!.isEmpty)
+              child: CircularProgressIndicator(color: Color(0xFFE31B23)),
+            );
+          }
+          if (snapshot.data!.isEmpty) {
             return const Center(
-                child: Text("Waiting for the next heartbeat...",
-                    style: TextStyle(color: Colors.grey)));
+              child: Text(
+                "Waiting for the next heartbeat...",
+                style: TextStyle(color: Colors.grey),
+              ),
+            );
+          }
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),

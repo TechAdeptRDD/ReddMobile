@@ -87,19 +87,29 @@ class _ActivityPageState extends State<ActivityPage> {
         ),
         body: BlocBuilder<ActivityBloc, ActivityState>(
           builder: (context, state) {
-            if (state is ActivityLoading || state is ActivityInitial)
+            if (state is ActivityLoading || state is ActivityInitial) {
               return const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFE31B23)));
-            if (state is ActivityError)
+                child: CircularProgressIndicator(color: Color(0xFFE31B23)),
+              );
+            }
+            if (state is ActivityError) {
               return Center(
-                  child: Text(state.message,
-                      style: const TextStyle(color: Colors.redAccent)));
+                child: Text(
+                  state.message,
+                  style: const TextStyle(color: Colors.redAccent),
+                ),
+              );
+            }
             if (state is ActivityLoaded) {
               final txs = state.transactions;
-              if (txs.isEmpty)
+              if (txs.isEmpty) {
                 return const Center(
-                    child: Text("No network activity.",
-                        style: TextStyle(color: Colors.grey)));
+                  child: Text(
+                    "No network activity.",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                );
+              }
 
               // Parse data for both tabs
               List<Widget> liveFeedItems = [];
