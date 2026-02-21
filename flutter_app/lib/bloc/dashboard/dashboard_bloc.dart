@@ -70,23 +70,28 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         String formatted = balanceRdd.toStringAsFixed(2).replaceAllMapped(
             RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
 
-        // Fetch Live Fiat Price (USD)
+        // Fetch live fiat price with selected currency preference.
         double fiatPrice = 0.0;
+        final preferredCurrency =
+            (await storage.getFiatPreference()).toLowerCase();
         try {
-          final preferredCurrency = await storage.getFiatPreference();
-          final res = await http.get(Uri.parse(
-              "https://api.coingecko.com/api/v3/simple/price?ids=reddcoinfinal res = await http.get(Uri.parse('https://api.coingecko.com/api/v3/simple/price?ids=reddcoin&vs_currencies=usd'));vs_currencies=$preferredCurrency"));
+          final res = await http.get(
+            Uri.parse(
+              'https://api.coingecko.com/api/v3/simple/price?ids=reddcoin&vs_currencies=$preferredCurrency',
+            ),
+          );
           if (res.statusCode == 200) {
-            fiatPrice = (json.decode(res.body)["reddcoin"][preferredCurrency] as num)
-                .toDouble();
+            fiatPrice =
+                (json.decode(res.body)["reddcoin"][preferredCurrency] as num)
+                    .toDouble();
           }
         } catch (_) {
           /* Silently fail fiat fetch to keep core wallet functional */
         }
 
         final double totalFiat = balanceRdd * fiatPrice;
-        String formattedFiat =
-            "${totalFiat.toStringAsFixed(2)} ${"USD"}";
+        final String formattedFiat =
+            "${totalFiat.toStringAsFixed(2)} ${preferredCurrency.toUpperCase()}";
 
         final List<dynamic> txs = data['transactions'] ?? [];
         emit(DashboardLoaded(address, formatted, formattedFiat, txs));

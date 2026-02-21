@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/reddid_service.dart';
@@ -14,36 +16,50 @@ class SocialPage extends StatefulWidget {
 class _SocialPageState extends State<SocialPage> {
   final TextEditingController _searchController = TextEditingController();
   final ReddIDService _reddIDService = ReddIDService();
+  Timer? _searchDebounce;
 
   bool _isChecking = false;
   bool? _isAvailable;
   String _message = "Search for a unique @handle to link to your wallet.";
   String _currentSearch = "";
 
-  void _checkName(String val) async {
-    final cleanName = val.toLowerCase().replaceAll('@', '').trim();
-    if (cleanName.length < 3) {
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _checkName(String val) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () async {
+      final cleanName = val.toLowerCase().replaceAll('@', '').trim();
+      if (cleanName.length < 3) {
+        if (!mounted) return;
+        setState(() {
+          _isAvailable = null;
+          _message = "Minimum 3 characters.";
+          _currentSearch = "";
+        });
+        return;
+      }
+
+      if (!mounted) return;
       setState(() {
-        _isAvailable = null;
-        _message = "Minimum 3 characters.";
-        _currentSearch = "";
+        _isChecking = true;
+        _message = "Scanning blockchain...";
+        _currentSearch = cleanName;
       });
-      return;
-    }
 
-    setState(() {
-      _isChecking = true;
-      _message = "Scanning blockchain...";
-      _currentSearch = cleanName;
-    });
+      final available = await _reddIDService.isUsernameAvailable(cleanName);
+      if (!mounted) return;
 
-    final available = await _reddIDService.isUsernameAvailable(cleanName);
-
-    setState(() {
-      _isChecking = false;
-      _isAvailable = available;
-      _message =
-          available ? "🎉 @$cleanName is available!" : "🔍 Identity Found!";
+      setState(() {
+        _isChecking = false;
+        _isAvailable = available;
+        _message =
+            available ? "🎉 @$cleanName is available!" : "🔍 Identity Found!";
+      });
     });
   }
 
@@ -76,31 +92,35 @@ class _SocialPageState extends State<SocialPage> {
                 "Search for an identity to tip them, or claim an available handle for yourself.",
                 style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 30),
-
-            TextField(
-              controller: _searchController,
-              onChanged: _checkName,
-              style: const TextStyle(color: Colors.white, fontSize: 18),
-              decoration: InputDecoration(
-                hintText: "Enter username...",
-                hintStyle: const TextStyle(color: Colors.white24),
-                prefixText: "@ ",
-                prefixStyle: const TextStyle(
-                    color: Color(0xFFE31B23),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.05),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide.none),
-                suffixIcon: _isChecking
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : (_isAvailable == true
-                        ? const Icon(Icons.check_circle, color: Colors.green)
-                        : null),
+            Semantics(
+              textField: true,
+              label: 'Search ReddID username',
+              hint: 'Type at least three characters',
+              child: TextField(
+                controller: _searchController,
+                onChanged: _checkName,
+                style: const TextStyle(color: Colors.white, fontSize: 18),
+                decoration: InputDecoration(
+                  hintText: "Enter username...",
+                  hintStyle: const TextStyle(color: Colors.white24),
+                  prefixText: "@ ",
+                  prefixStyle: const TextStyle(
+                      color: Color(0xFFE31B23),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.05),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: BorderSide.none),
+                  suffixIcon: _isChecking
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : (_isAvailable == true
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : null),
+                ),
               ),
             ),
             const SizedBox(height: 15),
@@ -109,10 +129,7 @@ class _SocialPageState extends State<SocialPage> {
                     color: _isAvailable == false
                         ? Colors.greenAccent
                         : Colors.grey)),
-
             const Spacer(),
-
-            // Layout changes based on if the name is claimed or available
             if (_isAvailable == true)
               SizedBox(
                 width: double.infinity,
@@ -134,7 +151,6 @@ class _SocialPageState extends State<SocialPage> {
                           fontSize: 16)),
                 ),
               ),
-
             if (_isAvailable == false) ...[
               SizedBox(
                 width: double.infinity,
