@@ -82,6 +82,7 @@ void main() {
   test('parses decimal fee response to satoshis per kb', () async {
     final service = BlockbookService(
       httpClient: MockClient((request) async {
+        expect(request.url.host, 'blockbook.reddcoin.com');
         if (request.url.path.contains('/estimatefee/1')) {
           return http.Response(json.encode({'result': '0.00012000'}), 200);
         }
@@ -92,7 +93,7 @@ void main() {
 
     final fee = await service.estimateFee(inputs: 1, outputs: 2);
 
-    expect(fee, 28);
+    expect(fee, 2712);
   });
 
   test('throws detailed error when node rejects broadcast', () async {

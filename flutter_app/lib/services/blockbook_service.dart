@@ -193,7 +193,7 @@ class BlockbookService {
         return rawFee.toInt();
       }
 
-      return (rawFee * _satsPerCoin).ceil();
+      return (rawFee * _satsPerCoin).round();
     }
 
     if (rawFee is! String || rawFee.trim().isEmpty) return null;
@@ -206,7 +206,7 @@ class BlockbookService {
 
     final asDouble = double.tryParse(trimmed);
     if (asDouble != null && asDouble > 0) {
-      return asDouble >= 1 ? asDouble.toInt() : (asDouble * _satsPerCoin).ceil();
+      return asDouble >= 1 ? asDouble.toInt() : (asDouble * _satsPerCoin).round();
     }
 
     return null;
