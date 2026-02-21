@@ -1,75 +1,123 @@
-name: Flutter Build
+name: Flutter CI and Release
+
 on:
+  pull_request:
+    paths:
+      - 'flutter_app/**'
+      - 'rust_core/**'
+      - '.github/workflows/flutter_build.yml'
   push:
+    branches:
+      - main
     tags:
       - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build:
+  validate:
+    name: Lint & Test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: flutter_app
     steps:
-      - uses: actions/checkout@v4
-      
-      # --- NEW: Install Rust and Android Targets ---
-      - name: Setup Rust Toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@6a3d8ea4d1fdbfb46b87116c4cca26e203f2486f # v2.16.0
         with:
-          targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
-          
+          flutter-version: '3.22.3'
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Static analysis
+        run: flutter analyze
+
+      - name: Unit tests
+        run: flutter test
+
+  build-android:
+    name: Build Android Release APK
+    runs-on: ubuntu-latest
+    needs: validate
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    env:
+      CARGO_TERM_COLOR: always
+      NDK_VERSION: 26.3.11579264
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Setup Java
+        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.3.0
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Setup Android SDK + NDK
+        uses: android-actions/setup-android@2f2f78f6ff77a09a721dd4f79f2dcdcb8112f58a # v3.2.2
+      - name: Install Android NDK
+        run: sdkmanager "ndk;${NDK_VERSION}"
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@9b327e4d31a0848fbf094892961691f4f08d6838 # master
+        with:
+          toolchain: stable
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@aef919558f29a0cbff16f963584e4104cb4f8bd1 # v2.7.3
+        with:
+          workspaces: rust_core
+
       - name: Install cargo-ndk
-        run: cargo install cargo-ndk
+        run: cargo install --locked cargo-ndk --version 3.5.4
 
-      # --- NEW: Compile Rust to Android .so libraries ---
-      - name: Build Rust Core for Android
+      - name: Build Rust Android libraries
+        working-directory: rust_core
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.NDK_VERSION }}
         run: |
-          cd rust_core
-          # This compiles the Rust code and outputs it directly into the Flutter Android jniLibs folder
-          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -o ../flutter_app/android/app/src/main/jniLibs build --release
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 \
+            -o ../flutter_app/android/app/src/main/jniLibs build --release
 
-      - uses: subosito/flutter-action@v2
+      - name: Setup Flutter
+        uses: subosito/flutter-action@6a3d8ea4d1fdbfb46b87116c4cca26e203f2486f # v2.16.0
         with:
-          flutter-version: '3.19.0'
-          channel: 'stable'
-          
-      - name: CI Platform Generation & Handshake
-        run: |
-          cd flutter_app
-          rm -rf android
-          flutter create --platforms=android --org com.reddcoin .
-          
-          # Bump minSdkVersion to 21 for mobile_scanner
-          sed -i 's/minSdkVersion .*/minSdkVersion 21/g' android/app/build.gradle
-          
-          # Inject Web3 permissions and legacy security handshake
-          python3 -c "
-          file_path = 'android/app/src/main/AndroidManifest.xml'
-          with open(file_path, 'r') as f:
-              c = f.read()
-          c = c.replace('<application', '<uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.CAMERA\"/>\n    <application')
-          c = c.replace('<activity', '<meta-data android:name=\"flutterEmbedding\" android:value=\"2\" />\n        <activity')
-          with open(file_path, 'w') as f:
-              f.write(c)
-          "
-          
-          # Move the compiled Rust libraries into the freshly generated Android folder
-          mkdir -p android/app/src/main/jniLibs
-          cp -r ../rust_core/target/aarch64-linux-android/release/librust_core.so android/app/src/main/jniLibs/arm64-v8a/ || true
-          
-      - name: Install Dependencies
-        run: |
-          cd flutter_app
-          flutter pub get
-          
+          flutter-version: '3.22.3'
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
       - name: Build APK
-        run: |
-          cd flutter_app
-          flutter build apk --release
-          
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v1
+        working-directory: flutter_app
+        run: flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: reddmobile-release-apk
+          path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@8c5df2f5605f088f6f4133148da18b9946be4c9f # v2.0.8
         with:
           files: flutter_app/build/app/outputs/flutter-apk/app-release.apk
           name: ReddMobile ${{ github.ref_name }}
